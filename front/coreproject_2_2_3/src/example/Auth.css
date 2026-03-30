@@ -1,0 +1,65 @@
+.authContainer,
+.profileContainer {
+  width: 100%;
+  min-height: 100%;
+  background-color: #000;
+  color: white;
+  box-sizing: border-box;
+  padding: 30px 20px;
+}
+
+.authContainer h2,
+.profileContainer h2 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.authForm input {
+  height: 46px;
+  border: none;
+  outline: none;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 15px;
+}
+
+.authForm button,
+.authBottom button,
+.logoutBtn {
+  height: 46px;
+  border: none;
+  border-radius: 10px;
+  background-color: #ff7a00;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.authBottom {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.authBottom p {
+  margin-bottom: 10px;
+  color: #ccc;
+}
+
+.profileCard {
+  background-color: #1f1f1f;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.profileCard p {
+  margin: 10px 0;
+  font-size: 16px;
+}
