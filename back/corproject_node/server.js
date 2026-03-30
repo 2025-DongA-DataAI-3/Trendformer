@@ -245,7 +245,7 @@ app.delete('/user/delete', (req, res) => {
 
 // 콘텐츠 조회 API
 app.get("/content", (req, res) => {
-  const sql = "SELECT * FROM TREND_CONTENT";
+  const sql = "SELECT * FROM TREND_CONTENT ORDER BY CREATED_AT DESC LIMIT 100";
 
   conn.query(sql, (err, result) => {
     if (err) {
