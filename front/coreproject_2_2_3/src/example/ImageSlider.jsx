@@ -366,7 +366,7 @@ const ImageSlider = () => {
                     <span className="video-category">
                       {item.PLATFORM_TYPE || "Meme"}
                     </span>
-                    <span className="video-user">@{item.USER_ID || "unknown"}</span>
+                    <span className="video-user">@{item.CREATOR_NAME || "unknown"}</span>
                   </div>
 
                   <h4

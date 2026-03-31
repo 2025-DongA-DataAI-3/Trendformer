@@ -135,6 +135,7 @@ const Search = () => {
     const result = contents.filter((item) => {
       const text = `
         ${item.TITLE || ""}
+        ${item.KEYWORDS || ""}
         ${item.PLATFORM_TYPE || ""}
         ${item.USER_ID || ""}
         ${item.CONTENT_ID || ""}
@@ -555,11 +556,11 @@ const Search = () => {
               <div className="tf-video-post-header">
                 <div className="tf-video-post-user">
                   <div className="tf-video-post-avatar">
-                    {(selectedVideo.USER_ID || "U").charAt(0).toUpperCase()}
+                    {(selectedVideo.CREATOR_NAME || "U").charAt(0).toUpperCase()}
                   </div>
 
                   <div className="tf-video-post-user-text">
-                    <strong>{selectedVideo.USER_ID || "unknown"}</strong>
+                    <strong>{selectedVideo.CREATOR_NAME || "unknown"}</strong>
                     <span>{selectedVideo.PLATFORM_TYPE || "platform"}</span>
                   </div>
                 </div>
