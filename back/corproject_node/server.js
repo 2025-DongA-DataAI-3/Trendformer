@@ -9,6 +9,8 @@ app.use(cors())
 // DB연결
 const conn = require('./config/db')
 
+const GPT_API_KEY = require('./config/api')
+
 // body 데이터 사용
 app.use(express.urlencoded({extended:true}))
 app.use(express.json())
@@ -268,7 +270,7 @@ app.get("/content", (req, res) => {
 });
 
 // GPT_API_KEY
-const GPT_API_KEY = "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";
+
 
 /**
  * AI 카테고리 분류 로직
