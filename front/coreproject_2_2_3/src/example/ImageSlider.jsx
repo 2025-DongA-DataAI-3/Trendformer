@@ -4,11 +4,11 @@ import {
   Bookmark,
   ChevronUp,
   ChevronDown,
-  Music2,
   Sparkles,
   Play,
 } from "lucide-react";
 import "./ImageSlider.css";
+import TikTokCard from "./TikTokCard"; // 필요시 삭제
 
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
@@ -19,6 +19,34 @@ const ImageSlider = () => {
   const [likeState, setLikeState] = useState({});
   const [savedPosts, setSavedPosts] = useState([]);
   const touchStartY = useRef(0);
+  const videoRefs = useRef({});
+  const wheelLock = useRef(false);
+  const [isPlaying, setIsPlaying] = useState({});
+  const [expandedPost, setExpandedPost] = useState(null);
+  const [progressMap, setProgressMap] = useState({});
+
+  const handleTimeUpdate = (contentId) => {
+    const video = videoRefs.current[contentId];
+    if (!video || !video.duration) return;
+
+    const progress = (video.currentTime / video.duration) * 100;
+
+    setProgressMap((prev) => ({
+      ...prev,
+      [contentId]: progress,
+    }));
+  };
+
+  const handleLoadedMetadata = (contentId) => {
+    setProgressMap((prev) => ({
+      ...prev,
+      [contentId]: 0,
+    }));
+  };
+
+  const toggleExpanded = (postId) => {
+    setExpandedPost((prev) => (prev === postId ? null : postId));
+  };
 
   useEffect(() => {
     const storedLikes = JSON.parse(localStorage.getItem(LIKE_STORAGE_KEY)) || {};
@@ -179,6 +207,52 @@ const ImageSlider = () => {
     }
   };
 
+  const togglePlayPause = (contentId) => {
+    const video = videoRefs.current[contentId];
+    if (!video) return;
+
+    if (video.paused) {
+      video.play();
+      setIsPlaying((prev) => ({ ...prev, [contentId]: true }));
+    } else {
+      video.pause();
+      setIsPlaying((prev) => ({ ...prev, [contentId]: false }));
+    }
+  };
+
+  useEffect(() => {
+  const active = contents[index];
+  if (!active) return;
+
+  const isTikTok = active.PLATFORM_TYPE?.toLowerCase() === "tiktok";
+
+  Object.entries(videoRefs.current).forEach(([id, video]) => {
+    if (!video) return;
+
+    if (Number(id) !== Number(active.CONTENT_ID)) {
+      video.pause();
+      video.currentTime = 0;
+    }
+  });
+
+  if (isTikTok) {
+    return;
+  }
+
+  const activeVideo = videoRefs.current[active.CONTENT_ID];
+  if (!activeVideo) return;
+
+  activeVideo.muted = true;
+  activeVideo
+    .play()
+    .then(() => {
+      setIsPlaying({ [active.CONTENT_ID]: true });
+    })
+    .catch((err) => {
+      console.log("자동재생 실패:", err);
+    });
+}, [index, contents]);
+
   const activeItem = useMemo(() => contents[index] || null, [contents, index]);
 
   if (!contents.length) {
@@ -197,11 +271,20 @@ const ImageSlider = () => {
   }
 
   return (
+
     <div
       className="viewer"
       onWheel={(e) => {
+        if (wheelLock.current) return;
+
+        wheelLock.current = true;
+
         if (e.deltaY > 0) goNext();
         if (e.deltaY < 0) goPrev();
+
+        setTimeout(() => {
+          wheelLock.current = false;
+        }, 350);
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -215,26 +298,67 @@ const ImageSlider = () => {
         {contents.map((item, i) => {
           const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
           const saved = isSaved(item.CONTENT_ID);
+          const shouldRenderVideo = Math.abs(i - index) <= 1;
+          const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok"; //삭제
+          const videoUrl = getVideoUrl(item.FILE_PATH);//삭제
 
           return (
             <div className="slide" key={item.CONTENT_ID || i}>
-              <div className="video-frame">
-                <video
-                  className="content-video"
-                  src={getVideoUrl(item.FILE_PATH)}
-                  muted
-                  loop
-                  playsInline
-                  controls={false}
-                  autoPlay={i === index}
-                  preload={i === index ? "auto" : "metadata"}
-                />
+  <div className="video-frame">
+    {shouldRenderVideo ? (
+      isTikTok ? (
+        <TikTokCard videoId={item.TIKTOK_VIDEO_ID || item.CONTENT_ID} />
+      ) : videoUrl ? (
+        <video
+          ref={(el) => {
+            if (el) {
+              videoRefs.current[item.CONTENT_ID] = el;
+            } else {
+              delete videoRefs.current[item.CONTENT_ID];
+            }
+          }}
+          className="content-video"
+          src={videoUrl}
+          muted
+          autoPlay={i === index}
+          loop
+          playsInline
+          controls={false}
+          preload={i === index ? "auto" : "none"}
+          onClick={() => togglePlayPause(item.CONTENT_ID)}
+          onLoadedData={() => {
+            if (i === index) {
+              const video = videoRefs.current[item.CONTENT_ID];
+              if (video) {
+                video.muted = true;
+                video.play().catch((err) => {
+                  console.log("로드 후 재생 실패:", err);
+                });
+              }
+            }
+          }}
+          onTimeUpdate={() => handleTimeUpdate(item.CONTENT_ID)}
+          onLoadedMetadata={() => handleLoadedMetadata(item.CONTENT_ID)}
+        />
+      ) : (
+        <div className="content-video">영상 주소가 없습니다.</div>
+      )
+    ) : (
+      <div className="content-video" />
+    )}
+                
+                <div className="video-progress">
+                  <div
+                    className="video-progress-fill"
+                    style={{ width: `${progressMap[item.CONTENT_ID] || 0}%` }}
+                  />
+                </div>
 
                 <div className="video-gradient" />
 
                 <div className="viewer-top-chip">
                   <span className="viewer-live-dot" />
-                  추천 밈 피드
+                  {i < 10 ? `${i + 1}위 🔥` : `${i + 1}위`}
                 </div>
 
                 <div className="video-overlay">
@@ -245,30 +369,35 @@ const ImageSlider = () => {
                     <span className="video-user">@{item.USER_ID || "unknown"}</span>
                   </div>
 
-                  <h4 className="video-title">
+                  <h4
+                    className={`video-title ${expandedPost === item.CONTENT_ID ? "expanded" : "collapsed"
+                      }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(item.CONTENT_ID);
+                    }}
+                  >
+
                     {item.TITLE || "지금 뜨는 밈 콘텐츠"}
                   </h4>
-
-                  <p className="video-desc">
-                    실시간 반응 기반 추천 피드 · 위아래로 넘기면서 빠르게 탐색
-                  </p>
-
+                  {expandedPost === item.CONTENT_ID &&
+                    (item.ORIGINAL_URL || item.ORIGINAL_LINK) && (
+                      <a
+                        href={item.ORIGINAL_URL || item.ORIGINAL_LINK}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="origin-link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        원본 보러가기
+                      </a>
+                    )}
                   <div className="video-tags">
                     <span>#{item.PLATFORM_TYPE || "trend"}</span>
                     <span>#shorts</span>
                     <span>#meme</span>
                   </div>
 
-                  {(item.ORIGINAL_URL || item.ORIGINAL_LINK) && (
-                    <a
-                      href={item.ORIGINAL_URL || item.ORIGINAL_LINK}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="origin-link"
-                    >
-                      원본 보러가기
-                    </a>
-                  )}
                 </div>
 
                 <div className="video-actions">
@@ -292,11 +421,6 @@ const ImageSlider = () => {
                     <Bookmark size={20} fill={saved ? "currentColor" : "none"} />
                     <span>{saved ? "저장됨" : "저장"}</span>
                   </button>
-
-                  <div className="action-btn static-btn">
-                    <Music2 size={20} />
-                    <span>밈</span>
-                  </div>
                 </div>
 
                 <div className="viewer-nav-hint">

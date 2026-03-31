@@ -14,6 +14,7 @@ import Profile from './example/Profile.jsx'
 import Layout from './example/Layout.jsx'
 import Login from './example/Login.jsx'
 import Join from './example/Join.jsx'
+import TikTokTest from './example/TikTokTest.jsx'
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')).render(
         <Route path='/join' element={<Join></Join>}></Route>
         <Route path='/profile' element={<Profile></Profile>}></Route>
         <Route path='/profile' element={<Profile></Profile>}></Route>
+        <Route path='/tiktok' element={<TikTokTest></TikTokTest>}></Route>
       </Route>
     </Routes>
   </BrowserRouter>

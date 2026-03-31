@@ -258,6 +258,7 @@ app.get("/content", (req, res) => {
 });
 
 
+
 app.listen(3002, () => {
   console.log("서버 실행 중: http://localhost:3002");
 });
