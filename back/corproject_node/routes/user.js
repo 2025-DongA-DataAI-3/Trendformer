@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db'); // 상위 폴더의 config 참조
+const conn = require('../config/db'); // 상위 폴더의 config 참조
 
 // 회원가입 API
 router.post('/join', (req, res) => {

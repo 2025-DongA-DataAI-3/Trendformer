@@ -197,7 +197,7 @@ const Profile = () => {
     showToast("프로필 정보가 저장되었습니다.");
   };
 
-  const handleSavePassword = (e) => {
+  const handleSavePassword = async (e) => {
     e.preventDefault();
 
     if (!pwForm.currentPw.trim()) {
@@ -220,20 +220,32 @@ const Profile = () => {
       return;
     }
 
-    const updatedUser = {
-      ...user,
-      pw: pwForm.newPw,
-    };
+    try {
+      const response = await fetch("http://localhost:3002/user/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          currentPw: pwForm.currentPw,
+          newPw: pwForm.newPw,
+        }),
+      });
 
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setPwForm({
-      currentPw: "",
-      newPw: "",
-      confirmPw: "",
-    });
-    setIsPwOpen(false);
-    showToast("비밀번호가 변경되었습니다.");
+      const data = await response.json();
+
+      if (data.success) {
+        const updatedUser = { ...user, pw: pwForm.newPw };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setPwForm({ currentPw: "", newPw: "", confirmPw: "" });
+        setIsPwOpen(false);
+        showToast("비밀번호가 변경되었습니다.");
+      } else {
+        alert(data.message || "비밀번호 변경에 실패했습니다.");
+      }
+    } catch (error) {
+      alert("비밀번호 변경에 실패했습니다.");
+    }
   };
 
   const handleClickPhotoChange = () => {

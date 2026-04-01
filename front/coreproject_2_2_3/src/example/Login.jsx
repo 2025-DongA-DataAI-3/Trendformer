@@ -50,7 +50,7 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:3002/login", {
+      const response = await fetch("http://localhost:3002/user/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

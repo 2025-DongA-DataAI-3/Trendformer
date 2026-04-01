@@ -77,7 +77,7 @@ const Join = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:3002/join", {
+      const response = await fetch("http://localhost:3002/user/join", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
