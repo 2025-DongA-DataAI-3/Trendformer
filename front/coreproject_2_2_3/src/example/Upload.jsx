@@ -275,7 +275,7 @@ const Upload = () => {
           <div style={styles.previewItem}>
             <div style={styles.previewLabel}>
               <CalendarDays size={14} />
-              작성일시
+              작성일시<span> </span>
             </div>
             <strong style={styles.previewValue}>{createdAtPreview}</strong>
           </div>
@@ -283,7 +283,7 @@ const Upload = () => {
           <div style={styles.previewItem}>
             <div style={styles.previewLabel}>
               <Tag size={14} />
-              현재 선택
+              현재 선택<span> </span>
             </div>
             <strong style={styles.previewValue}>
               {form.category || "카테고리 미선택"}
@@ -485,6 +485,7 @@ const styles = {
     appearance: "none",
     WebkitAppearance: "none",
     MozAppearance: "none",
+    colorScheme: "dark",
   },
   textarea: {
     ...baseField,
@@ -603,6 +604,7 @@ const styles = {
     textAlign: "right",
     lineHeight: 1.5,
   },
+
 };
 
 export default Upload;
