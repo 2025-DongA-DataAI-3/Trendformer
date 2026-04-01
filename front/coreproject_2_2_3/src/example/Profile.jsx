@@ -283,21 +283,37 @@ const Profile = () => {
     navigate("/login");
   };
 
-  const handleDeleteAccount = () => {
+const handleDeleteAccount = async () => {
     if (deleteText !== "회원탈퇴") {
-      alert("회원탈퇴를 정확히 입력해주세요.");
-      return;
+        alert("회원탈퇴를 정확히 입력해주세요.");
+        return;
     }
 
-    localStorage.removeItem("user");
-    localStorage.removeItem("isLogin");
-    localStorage.removeItem("searchHistory");
-    localStorage.removeItem("savedPosts");
-    localStorage.removeItem("postLikes");
+    try {
+        const response = await fetch("http://localhost:3002/user/delete", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: user.id }),
+        });
 
-    alert("회원 탈퇴가 완료되었습니다.");
-    navigate("/join");
-  };
+        const data = await response.json();
+
+        if (data.success) {
+            localStorage.removeItem("user");
+            localStorage.removeItem("isLogin");
+            localStorage.removeItem("searchHistory");
+            localStorage.removeItem("savedPosts");
+            localStorage.removeItem("postLikes");
+
+            alert("회원 탈퇴가 완료되었습니다.");
+            navigate("/join");
+        } else {
+            alert(data.message || "회원탈퇴에 실패했습니다.");
+        }
+    } catch (error) {
+        alert("서버 오류가 발생했습니다.");
+    }
+};
 
   const removeSavedItem = (postId) => {
     const updated = savedPosts.filter((item) => item.id !== postId);

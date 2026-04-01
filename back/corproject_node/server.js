@@ -30,6 +30,13 @@ const pythonProcess = spawn('python', [pythonFilePath], {
 pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
 pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
 
+app.get("/category", (req, res) => {
+    conn.query("SELECT * FROM T_CATEGORY", (err, result) => {
+        if (err) return res.status(500).json([]);
+        res.json(result);
+    });
+});
+
 app.get("/content", (req, res) => {
   const sql = `
     SELECT 
