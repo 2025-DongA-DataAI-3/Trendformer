@@ -89,50 +89,51 @@ const Upload = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validate()) return;
 
-    const payload = {
-      title: form.title.trim(),
-      category: form.category,
-      content: form.content.trim(),
-      keywords: form.keywords
-        .split(",")
-        .map((keyword) => keyword.trim())
-        .filter(Boolean),
-      created_at: new Date().toISOString(),
-      file_name: form.file?.name || "",
-      file_type: form.file?.type || "",
-    };
+    try {
+        const user = JSON.parse(localStorage.getItem("user")); // ← 여기 추가!
 
-    console.log("업로드 저장 데이터:", payload);
+        const formData = new FormData();
+        formData.append("file", form.file);
+        formData.append("userId", user?.id || "");
+        formData.append("title", form.title.trim());
+        formData.append("category", form.category);
+        formData.append("content", form.content.trim());
+        formData.append("keywords", form.keywords);
 
-    setSavedResult({
-      title: payload.title,
-      category: payload.category,
-      createdAt: new Date(payload.created_at).toLocaleString("ko-KR"),
-      keywords: payload.keywords,
-      fileName: payload.file_name,
-    });
+        const response = await fetch(`http://localhost:3002/upload`, {
+    method: "POST",
+    body: formData,
+});
 
-    alert("업로드 데이터가 저장되었습니다. 백엔드 연결 시 실제 전송으로 바꾸면 됩니다.");
+        const data = await response.json();
 
-    setForm({
-      title: "",
-      category: "",
-      content: "",
-      keywords: "",
-      file: null,
-    });
+        if (data.success) {
+            setSavedResult({
+                title: form.title.trim(),
+                category: form.category,
+                createdAt: new Date().toLocaleString("ko-KR"),
+                keywords: form.keywords.split(",").map((k) => k.trim()).filter(Boolean),
+                fileName: form.file?.name || "",
+            });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+            alert("업로드가 완료되었습니다.");
+
+            setForm({ title: "", category: "", content: "", keywords: "", file: null });
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            setErrors({});
+        } else {
+            alert(data.message || "업로드에 실패했습니다.");
+        }
+    } catch (error) {
+        console.error("업로드 오류:", error);
+        alert("서버 오류가 발생했습니다.");
     }
-
-    setErrors({});
-  };
+};
 
   return (
     <div style={styles.page}>

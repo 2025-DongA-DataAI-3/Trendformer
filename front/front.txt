@@ -2,3 +2,5 @@
 전 여러분을 믿습니다.
 
 npm i
+npm install multer
+npm i express
