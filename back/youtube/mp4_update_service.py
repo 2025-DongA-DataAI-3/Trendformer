@@ -1,53 +1,113 @@
-import time
+import re
+from datetime import datetime, timedelta
 
-from config import MAX_RESULTS_TOTAL
-from db import get_urls_from_db, update_file_path
-from mp4_extractor import get_mp4
+from db import get_connection
+from yt_dlp import YoutubeDL
 
 
-# =========================================================
-# 15. DB URL -> MP4 추출 -> DB 반영
-# =========================================================
-def extract_mp4_from_db_urls(limit=None):
-    if limit is None:
-        limit = MAX_RESULTS_TOTAL
+def get_expire_time_from_url(url):
+    if not url:
+        return None
 
-    rows = get_urls_from_db(limit=limit)
+    match = re.search(r"[?&]expire=(\d+)", url)
+    if not match:
+        return None
 
-    if not rows:
-        print("추출할 URL 없음")
-        return
+    expire_unix = int(match.group(1))
+    return datetime.fromtimestamp(expire_unix)
 
-    print("MP4 추출 대상 건수:", len(rows))
 
-    success = 0
-    fail = 0
+def get_new_mp4_url(youtube_url):
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "format": "best[ext=mp4]/best"
+    }
 
-    for i, row in enumerate(rows, start=1):
-        content_id = row["CONTENT_ID"]
-        url = row["ORIGINAL_LINK"]
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(youtube_url, download=False)
 
-        print(f"\n[{i}/{len(rows)}] MP4 추출 중")
-        print("CONTENT_ID:", content_id)
-        print("URL:", url)
+            if "url" in info and "googlevideo" in info["url"]:
+                return info["url"]
 
-        mp4_url = get_mp4(url)
+            if "formats" in info:
+                for f in reversed(info["formats"]):
+                    if f.get("ext") == "mp4" and f.get("url"):
+                        return f["url"]
 
-        if mp4_url:
-            ok = update_file_path(content_id, mp4_url)
-            if ok:
-                success += 1
-                print("저장 완료")
+    except Exception as e:
+        print(f"MP4 추출 실패: {youtube_url}")
+        print("에러:", e)
+
+    return None
+
+
+def extract_mp4_from_db_urls():
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT CONTENT_ID, ORIGINAL_LINK, FILE_PATH
+                FROM TREND_CONTENT
+                WHERE PLATFORM_TYPE = 'YOUTUBE'
+            """
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+        now = datetime.now()
+        limit_time = now + timedelta(minutes=30)
+
+        update_count = 0
+
+        for row in rows:
+            content_id = row["CONTENT_ID"]
+            original_link = row["ORIGINAL_LINK"]
+            file_path = row["FILE_PATH"]
+
+            # FILE_PATH 없으면 바로 재추출 대상
+            need_refresh = False
+
+            if not file_path:
+                need_refresh = True
             else:
-                fail += 1
-        else:
-            fail += 1
-            print("MP4 추출 실패")
+                expire_time = get_expire_time_from_url(file_path)
 
-        time.sleep(0.2)
+                # expire 파싱 안 되면 재추출
+                if expire_time is None:
+                    need_refresh = True
+                # 이미 만료됐거나 30분 이하 남았으면 재추출
+                elif expire_time <= limit_time:
+                    need_refresh = True
 
-    print("\n========================")
-    print("MP4 추출 작업 완료")
-    print("성공:", success)
-    print("실패:", fail)
-    print("========================")
+            if need_refresh:
+                print(f"\n재추출 대상: {content_id}")
+                print("원본 URL:", original_link)
+
+                new_mp4_url = get_new_mp4_url(original_link)
+
+                if new_mp4_url:
+                    with conn.cursor() as cursor:
+                        update_sql = """
+                            UPDATE TREND_CONTENT
+                            SET FILE_PATH = %s,
+                                UPDATED_AT = NOW()
+                            WHERE CONTENT_ID = %s
+                        """
+                        cursor.execute(update_sql, (new_mp4_url, content_id))
+                    conn.commit()
+
+                    update_count += 1
+                    print("MP4 재추출 성공")
+                else:
+                    print("MP4 재추출 실패")
+
+        print(f"\n총 {update_count}개 MP4 URL 갱신 완료")
+
+    except Exception as e:
+        conn.rollback()
+        print("extract_mp4_from_db_urls 실행 중 오류:", e)
+
+    finally:
+        conn.close()
