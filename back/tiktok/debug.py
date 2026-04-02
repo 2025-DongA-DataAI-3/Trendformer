@@ -1,30 +1,39 @@
 import asyncio
 from playwright.async_api import async_playwright
+import re
+import json
 
 async def main():
     async with async_playwright() as p:
-        context = await p.chromium.launch_persistent_context(
-            user_data_dir="tiktok_user_data",
-            headless=False,
-            args=["--disable-blink-features=AutomationControlled"]
-        )
-        page = context.pages[0]
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
+        page = await context.new_page()
+        
         await page.goto("https://www.tiktok.com/@leekakao8/video/7607814316061920530", wait_until="networkidle")
         await asyncio.sleep(5)
 
-        # 모든 data-e2e 값만 출력
-        e2e_values = await page.evaluate("""
-            () => {
-                const els = document.querySelectorAll('[data-e2e]');
-                return [...els].map(el => ({
-                    e2e: el.getAttribute('data-e2e'),
-                    text: el.innerText?.trim()?.substring(0, 50)
-                })).filter(x => x.text);
-            }
-        """)
-        for item in e2e_values:
-            print(f"data-e2e={item['e2e']}: {item['text']}")
+        # script 태그에서 날짜 찾기
+        content = await page.content()
+        
+        # createTime, uploadTime 패턴 찾기
+        patterns = [
+            r'"createTime"\s*:\s*"?(\d+)"?',
+            r'"uploadTime"\s*:\s*"?(\d+)"?',
+            r'"createTime"\s*:\s*(\d+)',
+        ]
+        for pattern in patterns:
+            matches = re.findall(pattern, content)
+            if matches:
+                print(f"패턴 {pattern}: {matches[:3]}")
+                # unix timestamp 변환
+                from datetime import datetime
+                for m in matches[:3]:
+                    try:
+                        dt = datetime.fromtimestamp(int(m))
+                        print(f"  → {dt}")
+                    except:
+                        pass
 
-        await context.close()
+        await browser.close()
 
 asyncio.run(main())

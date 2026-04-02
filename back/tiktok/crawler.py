@@ -1,7 +1,9 @@
 import asyncio
 import random
 import pymysql
+import re
 import requests
+from datetime import datetime
 from playwright.async_api import async_playwright
 from config import DB_CONFIG
 
@@ -62,11 +64,10 @@ def save_to_db(content_item, like_count, view_count):
 
             if row:
                 content_id = row[0]
-                metric_sql = """
+                cursor.execute("""
                     INSERT INTO TREND_METRIC (CONTENT_ID, VIEW_COUNT, LIKE_COUNT, RECORDED_AT)
                     VALUES (%s, %s, %s, NOW())
-                """
-                cursor.execute(metric_sql, (content_id, view_count, like_count))
+                """, (content_id, view_count, like_count))
 
         conn.commit()
         print(f"✅ 저장 완료 - 좋아요: {like_count}, 조회수: {view_count}")
@@ -99,15 +100,15 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # 업로드 날짜 추출
+        # 업로드 날짜 추출 (createTime unix timestamp)
         uploaded_at = None
         try:
-            time_element = await page.query_selector('time')
-            if time_element:
-                datetime_attr = await time_element.get_attribute('datetime')
-                if datetime_attr:
-                    uploaded_at = datetime_attr[:19].replace('T', ' ')
-                    print(f"📅 업로드 날짜: {uploaded_at}")
+            content = await page.content()
+            match = re.search(r'"createTime"\s*:\s*"?(\d+)"?', content)
+            if match:
+                timestamp = int(match.group(1))
+                uploaded_at = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                print(f"📅 업로드 날짜: {uploaded_at}")
         except:
             pass
 
