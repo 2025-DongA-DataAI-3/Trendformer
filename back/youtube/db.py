@@ -166,3 +166,46 @@ def check_file_path_status():
         return None
     finally:
         conn.close()
+
+# =========================================================
+# 17. TREND_METRIC 저장
+# =========================================================
+def save_metrics(rows):
+    if not rows:
+        print("저장할 metric 데이터 없음")
+        return
+
+    metric_rows = []
+
+    for row in rows:
+        metric_rows.append({
+            "CONTENT_ID": row.get("CONTENT_ID"),
+            "VIEW_COUNT": row.get("VIEW_COUNT", 0),
+            "LIKE_COUNT": row.get("LIKE_COUNT", 0)
+        })
+
+    sql = """
+    INSERT INTO TREND_METRIC (
+        CONTENT_ID,
+        VIEW_COUNT,
+        LIKE_COUNT
+    )
+    VALUES (
+        %(CONTENT_ID)s,
+        %(VIEW_COUNT)s,
+        %(LIKE_COUNT)s
+    )
+    """
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.executemany(sql, metric_rows)
+        conn.commit()
+        print(f"TREND_METRIC 저장 완료: {len(metric_rows)}건")
+    except Exception as e:
+        print("[TREND_METRIC 저장 실패]")
+        print("에러:", e)
+    finally:
+        conn.close()

@@ -37,8 +37,26 @@ def get_new_mp4_url(youtube_url):
                         return f["url"]
 
     except Exception as e:
+        err_msg = str(e).lower()
+
+        # 연령 제한 / 로그인 필요 / 일부 접근 제한 영상은 그냥 건너뜀
+        skip_keywords = [
+            "sign in to confirm your age",
+            "age-restricted",
+            "this video may be inappropriate for some users",
+            "login_required",
+            "private video",
+            "this video is private",
+            "video unavailable"
+        ]
+
+        if any(keyword in err_msg for keyword in skip_keywords):
+            print(f"[건너뜀] 접근 제한 영상: {youtube_url}")
+            return None
+
         print(f"MP4 추출 실패: {youtube_url}")
         print("에러:", e)
+        return None
 
     return None
 
@@ -101,7 +119,8 @@ def extract_mp4_from_db_urls():
                     update_count += 1
                     print("MP4 재추출 성공")
                 else:
-                    print("MP4 재추출 실패")
+                    print("MP4 재추출 실패 -> 다음 영상으로 진행")
+                    continue
 
         print(f"\n총 {update_count}개 MP4 URL 갱신 완료")
 
