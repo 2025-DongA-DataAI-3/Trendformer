@@ -45,7 +45,7 @@ def parse_og_description(desc):
             date_str = date_match.group(1)
             uploaded_at = datetime.strptime(date_str, "%B %d, %Y").strftime("%Y-%m-%d %H:%M:%S")
 
-        caption_match = re.search(r':\s*"(.+)"$', desc, re.DOTALL)
+        caption_match = re.search(r'\d{4}:\s*"(.+?)(?:"|$)', desc, re.DOTALL)
         if caption_match:
             title = caption_match.group(1).split('\n')[0][:200]
 

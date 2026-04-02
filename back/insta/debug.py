@@ -9,12 +9,15 @@ async def main():
             args=["--disable-blink-features=AutomationControlled"]
         )
         page = context.pages[0]
-        await page.goto("https://www.instagram.com/explore/tags/밈/", wait_until="networkidle")
+        await page.goto("https://www.instagram.com/p/DMusGqbzb3y/", wait_until="domcontentloaded")
         await asyncio.sleep(5)
 
-        # 페이지 전체 텍스트로 섹션 확인
-        body_text = await page.inner_text('body')
-        print(body_text[:3000])
+        meta_desc = await page.query_selector('meta[property="og:description"]')
+        if meta_desc:
+            desc = await meta_desc.get_attribute('content')
+            print(f"og:description 전체:\n{desc}")
+        else:
+            print("og:description 없음")
 
         await context.close()
 
