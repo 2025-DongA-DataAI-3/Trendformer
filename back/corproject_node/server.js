@@ -3,7 +3,7 @@ const express = require('express')
 const app = express()
 const mysql = require("mysql2")
 const { spawn } = require('child_process')
-// const path = require('path')
+const path = require('path')
 
 const cors = require('cors')
 app.use(cors())
@@ -21,8 +21,12 @@ app.use('/uploads', express.static('uploads'))
 app.use('/upload', uploadRouter)
 app.use('/user', userRouter)
 
+<<<<<<< HEAD
 
 // 유튜브 Python 실행
+=======
+// Python 실행
+>>>>>>> 5db6be2c57038a72fba1e0d535ae4a11b003caab
 const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
 const pythonProcess = spawn('python', [pythonFilePath], {
   stdio: 'inherit',
@@ -30,6 +34,7 @@ const pythonProcess = spawn('python', [pythonFilePath], {
 })
 pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
 pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
+<<<<<<< HEAD
 
 
 // 인스타 스케줄러 실행
@@ -49,6 +54,8 @@ const tiktokScheduler = spawn('python', ['scheduler.py'], {
 })
 tiktokScheduler.on('error', (err) => { console.error('틱톡 스케줄러 오류:', err) })
 tiktokScheduler.on('close', (code) => { console.log(`틱톡 스케줄러 종료, 코드: ${code}`) })
+=======
+>>>>>>> 5db6be2c57038a72fba1e0d535ae4a11b003caab
 
 app.get("/category", (req, res) => {
     conn.query("SELECT * FROM T_CATEGORY", (err, result) => {

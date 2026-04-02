@@ -12,9 +12,7 @@ body,
   min-height: 100%;
 }
 
-html, body { overflow: hidden; }
-.size { overflow: hidden; }
-.viewer { overflow: hidden; }
+
 
 :root {
   --tf-teal: #1f8a8a;
