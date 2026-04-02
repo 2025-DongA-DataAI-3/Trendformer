@@ -4,3 +4,4 @@ db.js
 api.js
 config.py
 __pycache__
+*.pyc
