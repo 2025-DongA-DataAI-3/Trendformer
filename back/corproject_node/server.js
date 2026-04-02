@@ -1,3 +1,4 @@
+const path = require('path')
 const express = require('express')
 const app = express()
 const mysql = require("mysql2")
@@ -20,7 +21,7 @@ app.use('/uploads', express.static('uploads'))
 app.use('/upload', uploadRouter)
 app.use('/user', userRouter)
 
-<<<<<<< HEAD
+
 // 유튜브 Python 실행
 const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
 const pythonProcess = spawn('python', [pythonFilePath], {
@@ -29,16 +30,7 @@ const pythonProcess = spawn('python', [pythonFilePath], {
 })
 pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
 pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
-=======
-// // Python 실행
-// const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
-// const pythonProcess = spawn('python', [pythonFilePath], {
-//   stdio: 'inherit',
-//   shell: true
-// })
-// pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
-// pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
->>>>>>> origin/dy
+
 
 // 인스타 스케줄러 실행
 const instaScheduler = spawn('python', ['scheduler.py'], {

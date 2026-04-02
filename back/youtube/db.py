@@ -167,6 +167,7 @@ def check_file_path_status():
     finally:
         conn.close()
 
+
 # =========================================================
 # 17. TREND_METRIC 저장
 # =========================================================
@@ -181,19 +182,22 @@ def save_metrics(rows):
         metric_rows.append({
             "CONTENT_ID": row.get("CONTENT_ID"),
             "VIEW_COUNT": row.get("VIEW_COUNT", 0),
-            "LIKE_COUNT": row.get("LIKE_COUNT", 0)
+            "LIKE_COUNT": row.get("LIKE_COUNT", 0),
+            "LIFECYCLE_STAGE": row.get("LIFECYCLE_STAGE", "도입")
         })
 
     sql = """
     INSERT INTO TREND_METRIC (
         CONTENT_ID,
         VIEW_COUNT,
-        LIKE_COUNT
+        LIKE_COUNT,
+        LIFECYCLE_STAGE
     )
     VALUES (
         %(CONTENT_ID)s,
         %(VIEW_COUNT)s,
-        %(LIKE_COUNT)s
+        %(LIKE_COUNT)s,
+        %(LIFECYCLE_STAGE)s
     )
     """
 
@@ -207,5 +211,70 @@ def save_metrics(rows):
     except Exception as e:
         print("[TREND_METRIC 저장 실패]")
         print("에러:", e)
+    finally:
+        conn.close()
+
+
+# =========================================================
+# 11-1. DB 1건 저장 (추가)
+# =========================================================
+def save_one_to_db(row):
+    if not row:
+        print("저장할 데이터 없음")
+        return False
+
+    sql = """
+    INSERT INTO TREND_CONTENT (
+        CONTENT_ID,
+        USER_ID,
+        PLATFORM_TYPE,
+        ORIGINAL_LINK,
+        TITLE,
+        CREATOR_NAME,
+        DESCRIPTION,
+        THUMBNAIL_PATH,
+        FILE_PATH,
+        SOURCE_TYPE,
+        IS_AI_TRANSFORMED,
+        UPLOADED_AT
+    )
+    VALUES (
+        %(CONTENT_ID)s,
+        %(USER_ID)s,
+        %(PLATFORM_TYPE)s,
+        %(ORIGINAL_LINK)s,
+        %(TITLE)s,
+        %(CREATOR_NAME)s,
+        %(DESCRIPTION)s,
+        %(THUMBNAIL_PATH)s,
+        %(FILE_PATH)s,
+        %(SOURCE_TYPE)s,
+        %(IS_AI_TRANSFORMED)s,
+        %(UPLOADED_AT)s
+    )
+    ON DUPLICATE KEY UPDATE
+        ORIGINAL_LINK = VALUES(ORIGINAL_LINK),
+        TITLE = VALUES(TITLE),
+        CREATOR_NAME = VALUES(CREATOR_NAME),
+        DESCRIPTION = VALUES(DESCRIPTION),
+        THUMBNAIL_PATH = VALUES(THUMBNAIL_PATH),
+        FILE_PATH = VALUES(FILE_PATH),
+        SOURCE_TYPE = VALUES(SOURCE_TYPE),
+        IS_AI_TRANSFORMED = VALUES(IS_AI_TRANSFORMED),
+        UPLOADED_AT = VALUES(UPLOADED_AT)
+    """
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, row)
+        conn.commit()
+        print(f"DB 1건 저장 완료: {row.get('CONTENT_ID')}")
+        return True
+    except Exception as e:
+        print("[DB 1건 저장 실패]")
+        print("에러:", e)
+        return False
     finally:
         conn.close()

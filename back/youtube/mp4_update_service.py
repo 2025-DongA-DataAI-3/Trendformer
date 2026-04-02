@@ -130,3 +130,46 @@ def extract_mp4_from_db_urls():
 
     finally:
         conn.close()
+
+
+# =========================================================
+# 1건 바로 MP4 추출 후 DB 반영 (추가)
+# =========================================================
+def extract_mp4_for_one_row(content_id, original_link):
+    conn = get_connection()
+
+    try:
+        if not content_id or not original_link:
+            print("[건너뜀] CONTENT_ID 또는 ORIGINAL_LINK 없음")
+            return None
+
+        print(f"\n즉시 MP4 추출 대상: {content_id}")
+        print("원본 URL:", original_link)
+
+        new_mp4_url = get_new_mp4_url(original_link)
+
+        if new_mp4_url:
+            with conn.cursor() as cursor:
+                update_sql = """
+                    UPDATE TREND_CONTENT
+                    SET FILE_PATH = %s,
+                        UPDATED_AT = NOW()
+                    WHERE CONTENT_ID = %s
+                """
+                cursor.execute(update_sql, (new_mp4_url, content_id))
+            conn.commit()
+
+            print("즉시 MP4 추출 성공")
+            return new_mp4_url
+
+        else:
+            print("즉시 MP4 추출 실패 -> 다음 영상으로 진행")
+            return None
+
+    except Exception as e:
+        conn.rollback()
+        print("extract_mp4_for_one_row 실행 중 오류:", e)
+        return None
+
+    finally:
+        conn.close()
