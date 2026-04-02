@@ -1,11 +1,9 @@
 import asyncio
 import random
 import pymysql
-import re
 import requests
 from playwright.async_api import async_playwright
 from config import DB_CONFIG
-
 
 def get_connection():
     return pymysql.connect(**DB_CONFIG)
@@ -54,8 +52,8 @@ def save_to_db(content_item, like_count, view_count):
         with conn.cursor() as cursor:
             content_sql = """
                 INSERT IGNORE INTO TREND_CONTENT
-                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, THUMBNAIL_PATH, FILE_PATH, SOURCE_TYPE, CREATED_AT, UPDATED_AT)
-                VALUES (UUID(), 'TIKTOK', %s, %s, %s, %s, %s, 'CRAWLING', NOW(), NOW())
+                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, THUMBNAIL_PATH, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
+                VALUES (UUID(), 'TIKTOK', %s, %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
             """
             cursor.execute(content_sql, content_item)
 
@@ -101,6 +99,18 @@ async def get_post_details(page, url):
         except:
             pass
 
+        # 업로드 날짜 추출
+        uploaded_at = None
+        try:
+            time_element = await page.query_selector('time')
+            if time_element:
+                datetime_attr = await time_element.get_attribute('datetime')
+                if datetime_attr:
+                    uploaded_at = datetime_attr[:19].replace('T', ' ')
+                    print(f"📅 업로드 날짜: {uploaded_at}")
+        except:
+            pass
+
         # oEmbed로 제목, 썸네일 추출
         oembed = get_oembed_data(url)
         title = "제목 없음"
@@ -116,7 +126,7 @@ async def get_post_details(page, url):
         print(f"👍 좋아요: {like_count} | 👁️ 조회수: {view_count}")
 
         return {
-            "content": (url, title, title, thumbnail, embed_url),
+            "content": (url, title, title, thumbnail, embed_url, uploaded_at),
             "like_count": like_count,
             "view_count": view_count
         }
@@ -134,11 +144,11 @@ async def main():
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
-        headless=False,
-        args=["--disable-blink-features=AutomationControlled"]
-    )
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
         context = await browser.new_context()
-        page = await context.new_page() 
+        page = await context.new_page()
 
         for tag in target_tags:
             print(f"\n🔎 #{tag} 탐색 시작")

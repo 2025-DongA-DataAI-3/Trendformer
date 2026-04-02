@@ -61,6 +61,13 @@ def save_metric(content_id, like_count, view_count):
                 """, (content_id, view_count, like_count))
                 print(f"✅ 신규 기록 - 좋아요: {like_count} | 조회수: {view_count}")
 
+            # UPDATED_AT 갱신
+            cursor.execute("""
+                UPDATE TREND_CONTENT
+                SET UPDATED_AT = NOW()
+                WHERE CONTENT_ID = %s
+            """, (content_id,))
+
         conn.commit()
     except Exception as e:
         print(f"❌ DB 저장 실패: {e}")

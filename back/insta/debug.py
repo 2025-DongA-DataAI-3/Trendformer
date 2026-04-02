@@ -9,12 +9,12 @@ async def main():
             args=["--disable-blink-features=AutomationControlled"]
         )
         page = context.pages[0]
-        await page.goto("https://www.instagram.com/p/DD4h_8Uy2ka/", wait_until="domcontentloaded")
+        await page.goto("https://www.instagram.com/explore/tags/밈/", wait_until="networkidle")
         await asyncio.sleep(5)
 
-        # 페이지 전체 텍스트 출력
+        # 페이지 전체 텍스트로 섹션 확인
         body_text = await page.inner_text('body')
-        print(body_text[:3000])  # 앞부분 3000자만 출력
+        print(body_text[:3000])
 
         await context.close()
 

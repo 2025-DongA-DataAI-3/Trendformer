@@ -28,7 +28,6 @@ def save_metric(content_id, like_count):
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
-            # 오늘 날짜로 이미 기록됐는지 확인
             cursor.execute("""
                 SELECT METRIC_ID FROM TREND_METRIC
                 WHERE CONTENT_ID = %s AND DATE(RECORDED_AT) = CURDATE()
@@ -36,7 +35,6 @@ def save_metric(content_id, like_count):
             existing = cursor.fetchone()
 
             if existing:
-                # 오늘 기록이 있으면 업데이트
                 cursor.execute("""
                     UPDATE TREND_METRIC
                     SET LIKE_COUNT = %s, RECORDED_AT = NOW()
@@ -44,12 +42,18 @@ def save_metric(content_id, like_count):
                 """, (like_count, content_id))
                 print(f"🔄 업데이트 완료 - CONTENT_ID: {content_id} | 좋아요: {like_count}")
             else:
-                # 오늘 기록이 없으면 새로 INSERT
                 cursor.execute("""
                     INSERT INTO TREND_METRIC (CONTENT_ID, VIEW_COUNT, LIKE_COUNT, RECORDED_AT)
                     VALUES (%s, 0, %s, NOW())
                 """, (content_id, like_count))
                 print(f"✅ 신규 기록 - CONTENT_ID: {content_id} | 좋아요: {like_count}")
+
+            # UPDATED_AT 갱신
+            cursor.execute("""
+                UPDATE TREND_CONTENT
+                SET UPDATED_AT = NOW()
+                WHERE CONTENT_ID = %s
+            """, (content_id,))
 
         conn.commit()
     except Exception as e:
@@ -63,23 +67,24 @@ async def get_like_count(page, url):
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         await asyncio.sleep(random.uniform(3, 5))
 
+        # og:description에서 좋아요 추출
         like_count = 0
-        like_selectors = [
-            "section a[href*='liked_by'] span",
-            "span:has-text('likes')",
-            "span:has-text('좋아요')",
-        ]
-        for selector in like_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    text = await element.inner_text()
-                    numbers = re.findall(r'\d+', text.replace(',', ''))
-                    if numbers:
-                        like_count = int(numbers[0])
-                        break
-            except:
-                continue
+        try:
+            meta_desc = await page.query_selector('meta[property="og:description"]')
+            if meta_desc:
+                desc = await meta_desc.get_attribute('content')
+                like_match = re.search(r'([\d.]+[KM]?)\s*likes', desc, re.IGNORECASE)
+                if like_match:
+                    like_text = like_match.group(1)
+                    if 'K' in like_text:
+                        like_count = int(float(like_text.replace('K', '')) * 1000)
+                    elif 'M' in like_text:
+                        like_count = int(float(like_text.replace('M', '')) * 1000000)
+                    else:
+                        like_count = int(like_text)
+                    print(f"👍 좋아요: {like_count}")
+        except Exception as e:
+            print(f"⚠️ 좋아요 추출 실패: {e}")
 
         return like_count
 

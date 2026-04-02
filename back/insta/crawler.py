@@ -2,6 +2,7 @@ import asyncio
 import random
 import pymysql
 import re
+from datetime import datetime
 from playwright.async_api import async_playwright
 from config import DB_CONFIG
 
@@ -20,14 +21,50 @@ def get_existing_urls():
     finally:
         if 'conn' in locals(): conn.close()
 
+def parse_og_description(desc):
+    title = "제목 없음"
+    uploaded_at = None
+    like_count = 0
+
+    if not desc:
+        return title, uploaded_at, like_count
+
+    try:
+        # 좋아요 추출 (99K likes)
+        like_match = re.search(r'([\d.]+[KM]?)\s*likes', desc, re.IGNORECASE)
+        if like_match:
+            like_text = like_match.group(1)
+            if 'K' in like_text:
+                like_count = int(float(like_text.replace('K', '')) * 1000)
+            elif 'M' in like_text:
+                like_count = int(float(like_text.replace('M', '')) * 1000000)
+            else:
+                like_count = int(like_text)
+
+        # 날짜 추출 (July 30, 2025)
+        date_match = re.search(r'(\w+ \d+, \d{4})', desc)
+        if date_match:
+            date_str = date_match.group(1)
+            uploaded_at = datetime.strptime(date_str, "%B %d, %Y").strftime("%Y-%m-%d %H:%M:%S")
+
+        # 캡션 추출
+        caption_match = re.search(r':\s*"(.+)"$', desc, re.DOTALL)
+        if caption_match:
+            title = caption_match.group(1).split('\n')[0][:200]
+
+    except Exception as e:
+        print(f"파싱 오류: {e}")
+
+    return title, uploaded_at, like_count
+
 def save_to_db(content_item, like_count):
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
             content_sql = """
                 INSERT IGNORE INTO TREND_CONTENT
-                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, FILE_PATH, SOURCE_TYPE, CREATED_AT, UPDATED_AT)
-                VALUES (UUID(), 'INSTAGRAM', %s, %s, %s, %s, 'CRAWLING', NOW(), NOW())
+                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
+                VALUES (UUID(), 'INSTAGRAM', %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
             """
             cursor.execute(content_sql, content_item)
 
@@ -61,43 +98,37 @@ async def get_post_details(page, url):
             print(f"⏭️ 일반 게시물 스킵: {url}")
             return None
 
-        # 제목(캡션) 추출
+        # og:description에서 제목, 날짜, 좋아요 한번에 추출
         title = "제목 없음"
-        title_element = await page.query_selector('h1')
-        if title_element:
-            title = await title_element.inner_text()
-            title = title.split('\n')[0][:200]
+        uploaded_at = None
+        like_count = 0
+
+        try:
+            meta_desc = await page.query_selector('meta[property="og:description"]')
+            if meta_desc:
+                desc = await meta_desc.get_attribute('content')
+                print(f"📝 og:description: {desc[:100]}")
+                title, uploaded_at, like_count = parse_og_description(desc)
+                print(f"📅 업로드 날짜: {uploaded_at}")
+                print(f"👍 좋아요: {like_count}")
+                print(f"📌 제목: {title}")
+        except Exception as e:
+            print(f"⚠️ meta 추출 실패: {e}")
 
         # 설명 추출
         description = ""
-        desc_element = await page.query_selector('h1')
-        if desc_element:
-            description = await desc_element.inner_text()
-            description = description[:500]
-
-        # 좋아요 수 추출
-        like_count = 0
-        like_selectors = [
-            "section a[href*='liked_by'] span",
-            "span:has-text('likes')",
-            "span:has-text('좋아요')",
-        ]
-        for selector in like_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    text = await element.inner_text()
-                    numbers = re.findall(r'\d+', text.replace(',', ''))
-                    if numbers:
-                        like_count = int(numbers[0])
-                        break
-            except:
-                continue
+        try:
+            meta_desc = await page.query_selector('meta[property="og:description"]')
+            if meta_desc:
+                description = await meta_desc.get_attribute('content')
+                description = description[:500]
+        except:
+            pass
 
         embed_url = url.rstrip('/') + '/embed'
 
         return {
-            "content": (url, title, description, embed_url),
+            "content": (url, title, description, embed_url, uploaded_at),
             "like_count": like_count
         }
 
