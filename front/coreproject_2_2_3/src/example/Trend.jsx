@@ -11,50 +11,42 @@ import {
 const categoryList = [
   {
     id: 1,
-    name: "유행어",
-    desc: "지금 가장 많이 따라 쓰는 밈",
+    name: "챌린지 & 댄스",
     color: "linear-gradient(135deg, rgba(31,138,138,0.34), rgba(63,208,201,0.14))",
   },
   {
     id: 2,
-    name: "챌린지",
-    desc: "짧고 강하게 퍼지는 숏폼 챌린지",
+    name: "유머 & 상황극",
     color: "linear-gradient(135deg, rgba(29,95,154,0.32), rgba(63,208,201,0.12))",
   },
   {
     id: 3,
-    name: "동물",
-    desc: "반응 좋은 귀여운 동물 밈",
+    name: "게임 & 테크",
     color: "linear-gradient(135deg, rgba(21,114,108,0.3), rgba(126,243,234,0.12))",
   },
   {
     id: 4,
-    name: "게임",
-    desc: "게임 플레이, 반응, 편집 밈",
+    name: "아이돌 & 덕질",
     color: "linear-gradient(135deg, rgba(18,86,130,0.34), rgba(90,175,215,0.12))",
   },
   {
     id: 5,
-    name: "연예",
-    desc: "방송, 인터뷰, 무대 반응 밈",
+    name: "라이프스타일",
     color: "linear-gradient(135deg, rgba(31,138,138,0.28), rgba(29,95,154,0.14))",
   },
   {
     id: 6,
-    name: "드라마",
-    desc: "장면 패러디와 대사 밈",
+    name: "동물 & 힐링",
     color: "linear-gradient(135deg, rgba(13,77,94,0.36), rgba(63,208,201,0.1))",
   },
   {
     id: 7,
-    name: "일상공감",
-    desc: "누구나 공감하는 생활형 밈",
+    name: "스포츠 & 액티비티",
     color: "linear-gradient(135deg, rgba(25,108,104,0.3), rgba(111,233,224,0.12))",
   },
   {
     id: 8,
-    name: "패러디",
-    desc: "편집과 합성 중심의 인기 밈",
+    name: "이슈 & 리액션",
     color: "linear-gradient(135deg, rgba(20,86,109,0.34), rgba(63,208,201,0.1))",
   },
 ];
