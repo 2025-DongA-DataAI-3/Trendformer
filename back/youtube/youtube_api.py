@@ -6,6 +6,24 @@ from config import REQUEST_SLEEP, SHORTS_MAX_SECONDS
 from utils import convert_datetime, parse_iso8601_duration_to_seconds, chunked
 
 
+def raise_if_api_error(data, res, api_name="API"):
+    if res.status_code == 200:
+        return
+
+    print(f"{api_name} 에러:", data)
+
+    reason = ""
+    if isinstance(data, dict):
+        errors = data.get("error", {}).get("errors", [])
+        if errors:
+            reason = errors[0].get("reason", "")
+
+    if reason == "quotaExceeded":
+        raise Exception("quotaExceeded")
+
+    raise Exception(f"{api_name} 오류")
+
+
 # =========================================================
 # 6. 유튜브 검색
 # =========================================================
@@ -38,6 +56,8 @@ def search_youtube(api_key, keyword, max_results=20):
         data = res.json()
 
         print(f"[search] keyword={keyword}, status={res.status_code}")
+
+        raise_if_api_error(data, res, "검색 API")
 
         if res.status_code != 200:
             print("검색 API 에러:", data)
@@ -81,6 +101,8 @@ def get_video_details(api_key, video_ids):
             timeout=20
         )
         data = res.json()
+
+        raise_if_api_error(data, res, "videos API")
 
         if res.status_code != 200:
             print("videos API 에러:", data)
@@ -130,6 +152,8 @@ def get_channel_country_map(api_key, channel_ids):
             timeout=20
         )
         data = res.json()
+
+        raise_if_api_error(data, res, "channels API")
 
         if res.status_code != 200:
             print("channels API 에러:", data)

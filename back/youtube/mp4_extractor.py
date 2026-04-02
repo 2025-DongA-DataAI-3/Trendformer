@@ -10,7 +10,8 @@ def get_mp4(url):
             "quiet": True,
             "no_warnings": True,
             "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
-            "noplaylist": True
+            "noplaylist": True,
+            "cookiesfrombrowser": ("chrome",)
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

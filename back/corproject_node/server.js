@@ -7,7 +7,6 @@ const path = require('path')
 const cors = require('cors')
 app.use(cors())
 
-// body 파싱 미들웨어 먼저!
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -21,7 +20,7 @@ app.use('/uploads', express.static('uploads'))
 app.use('/upload', uploadRouter)
 app.use('/user', userRouter)
 
-// Python 실행
+
 const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
 const pythonProcess = spawn('python', [pythonFilePath], {
   stdio: 'inherit',
@@ -29,6 +28,27 @@ const pythonProcess = spawn('python', [pythonFilePath], {
 })
 pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
 pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
+
+
+
+// 인스타 스케줄러 실행
+const instaScheduler = spawn('python', ['scheduler.py'], {
+    cwd: path.join(__dirname, '..', 'insta'),
+    stdio: 'inherit',
+    shell: true
+})
+instaScheduler.on('error', (err) => { console.error('인스타 스케줄러 오류:', err) })
+instaScheduler.on('close', (code) => { console.log(`인스타 스케줄러 종료, 코드: ${code}`) })
+
+// 틱톡 스케줄러 실행
+const tiktokScheduler = spawn('python', ['scheduler.py'], {
+    cwd: path.join(__dirname, '..', 'tiktok'),
+    stdio: 'inherit',
+    shell: true
+})
+tiktokScheduler.on('error', (err) => { console.error('틱톡 스케줄러 오류:', err) })
+tiktokScheduler.on('close', (code) => { console.log(`틱톡 스케줄러 종료, 코드: ${code}`) })
+
 
 app.get("/category", (req, res) => {
     conn.query("SELECT * FROM T_CATEGORY", (err, result) => {
