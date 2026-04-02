@@ -30,6 +30,11 @@
   }
 }
 
+html {
+  height: 100%;
+  overflow: hidden; /* 🔥 이거도 중요 */
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --text: #9ca3af;
@@ -52,6 +57,8 @@
 
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden; /* 🔥 스크롤 제거 핵심 */
 }
 
 #root {
@@ -60,12 +67,14 @@ body {
   margin: 0 auto;
   text-align: center;
   border-inline: 1px solid var(--border);
-  min-height: 100svh;
+
+  height: 100vh;        /* 🔥 변경 */
+  overflow: hidden;     /* 🔥 추가 */
+
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
-
 h1,
 h2 {
   font-family: var(--heading);
