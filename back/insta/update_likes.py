@@ -3,15 +3,7 @@ import random
 import pymysql
 import re
 from playwright.async_api import async_playwright
-
-DB_CONFIG = {
-    'host': 'project-db-campus.smhrd.com',
-    'user': 'cgi_25k_da3_p2_2',
-    'password': 'smhrd2',
-    'database': 'cgi_25k_da3_p2_2',
-    'port': 3307,
-    'charset': 'utf8mb4'
-}
+from config import DB_CONFIG
 
 def get_connection():
     return pymysql.connect(**DB_CONFIG)
