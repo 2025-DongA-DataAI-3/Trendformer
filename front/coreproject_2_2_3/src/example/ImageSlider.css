@@ -1,6 +1,7 @@
 .home-page {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
   padding: 0 16px 28px;
   box-sizing: border-box;
   padding-bottom: 0px;
@@ -9,8 +10,7 @@
 .viewer {
   width: 100%;
   height: 76vh;
-  min-height: 540px;
-  max-height: 820px;
+  height: calc(100vh - 200px); /* 🔥 핵심 */
   overflow: hidden;
   position: relative;
   border-radius: 14px;
@@ -94,6 +94,73 @@
   background: #000;
 }
 
+.embed-crop {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.embed-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #000;
+}
+
+.instagram-crop {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.instagram-frame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+
+  width: calc(100% + 18px);   /* 스크롤바 폭 보정 */
+  height: 100%;
+  border: none;
+
+  transform: translateX(calc(-50% + 11px)) scale(1.4);
+  transform-origin: center center;
+}
+
+.tiktok-crop {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.tiktok-crop {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.tiktok-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: calc(100% + 60px);     /* 🔥 좌우 꽉 채우기 */
+  height: calc(100% + 400px);   /* 🔥 위아래 크게 늘림 */
+
+  border: none;
+  display: block;
+  background: #000;
+
+  transform: translate(-50%, -15%) scale(1.35); /* 🔥 확대 + 위로 이동 */
+  transform-origin: center;
+}
+
 .video-gradient {
   position: absolute;
   inset: 0;
@@ -135,7 +202,7 @@
   position: absolute;
   left: 18px;
   right: 90px;
-  bottom: 50px;
+  bottom: 5px;
   z-index: 5;
   color: #fff;
   box-sizing: border-box;
@@ -402,11 +469,6 @@
 
   .video-title {
     font-size: 22px;
-  }
-
-  .video-overlay {
-    right: 84px;
-    bottom: 72px;
   }
 
   .viewer-bottom-summary {

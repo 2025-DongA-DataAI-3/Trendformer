@@ -168,7 +168,7 @@ const Upload = () => {
           <select id="category" name="category" value={form.category} onChange={handleChange} style={styles.select}>
             <option value="">카테고리를 선택하세요</option>
             {categoryOptions.map((cat) => (
-              <option key={cat.CATEGORY_ID} value={cat.CATEGORY_ID}>
+              <option key={cat.CATEGORY_ID} value={cat.CATEGORY_NAME}>
                 {cat.CATEGORY_NAME}
               </option>
             ))}
@@ -189,11 +189,11 @@ const Upload = () => {
 
         <div style={styles.previewGrid}>
           <div style={styles.previewItem}>
-            <div style={styles.previewLabel}><CalendarDays size={14} />작성일시</div>
+            <div style={styles.previewLabel}><CalendarDays size={14} />작성일시</div><br />
             <strong style={styles.previewValue}>{createdAtPreview}</strong>
           </div>
           <div style={styles.previewItem}>
-            <div style={styles.previewLabel}><Tag size={14} />현재 선택</div>
+            <div style={styles.previewLabel}><Tag size={14} />현재 선택</div><br></br>
             <strong style={styles.previewValue}>{form.category || "카테고리 미선택"}</strong>
           </div>
         </div>

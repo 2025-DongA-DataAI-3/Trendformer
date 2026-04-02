@@ -8,7 +8,6 @@ import {
   Play,
 } from "lucide-react";
 import "./ImageSlider.css";
-import TikTokCard from "./TikTokCard"; // 필요시 삭제
 
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
@@ -98,6 +97,20 @@ const ImageSlider = () => {
     }
 
     return `http://localhost:3002/uploads/${filePath}`;
+  };
+
+  const getInstagramEmbedUrl = (url) => {
+    if (!url) return "";
+
+    const cleanUrl = url.trim();
+
+    if (cleanUrl.includes("/embed")) {
+      return cleanUrl;
+    }
+
+    return cleanUrl.endsWith("/")
+      ? `${cleanUrl}embed`
+      : `${cleanUrl}/embed`;
   };
 
   const getLikeInfo = (postId, baseLikes = 0) => {
@@ -221,37 +234,39 @@ const ImageSlider = () => {
   };
 
   useEffect(() => {
-  const active = contents[index];
-  if (!active) return;
+    const active = contents[index];
+    if (!active) return;
 
-  const isTikTok = active.PLATFORM_TYPE?.toLowerCase() === "tiktok";
+    const platform = active.PLATFORM_TYPE?.toLowerCase();
+    const isTikTok = platform === "tiktok";
+    const isInstagram = platform === "instagram";
 
-  Object.entries(videoRefs.current).forEach(([id, video]) => {
-    if (!video) return;
+    Object.entries(videoRefs.current).forEach(([id, video]) => {
+      if (!video) return;
 
-    if (Number(id) !== Number(active.CONTENT_ID)) {
-      video.pause();
-      video.currentTime = 0;
-    }
-  });
-
-  if (isTikTok) {
-    return;
-  }
-
-  const activeVideo = videoRefs.current[active.CONTENT_ID];
-  if (!activeVideo) return;
-
-  activeVideo.muted = true;
-  activeVideo
-    .play()
-    .then(() => {
-      setIsPlaying({ [active.CONTENT_ID]: true });
-    })
-    .catch((err) => {
-      console.log("자동재생 실패:", err);
+      if (Number(id) !== Number(active.CONTENT_ID)) {
+        video.pause();
+        video.currentTime = 0;
+      }
     });
-}, [index, contents]);
+
+    if (isTikTok || isInstagram) {
+      return;
+    }
+
+    const activeVideo = videoRefs.current[active.CONTENT_ID];
+    if (!activeVideo) return;
+
+    activeVideo.muted = true;
+    activeVideo
+      .play()
+      .then(() => {
+        setIsPlaying({ [active.CONTENT_ID]: true });
+      })
+      .catch((err) => {
+        console.log("자동재생 실패:", err);
+      });
+  }, [index, contents]);
 
   const activeItem = useMemo(() => contents[index] || null, [contents, index]);
 
@@ -299,54 +314,82 @@ const ImageSlider = () => {
           const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
           const saved = isSaved(item.CONTENT_ID);
           const shouldRenderVideo = Math.abs(i - index) <= 1;
-          const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok"; //삭제
-          const videoUrl = getVideoUrl(item.FILE_PATH);//삭제
+          const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok";
+          const isInstagram = item.PLATFORM_TYPE?.toLowerCase() === "instagram";
+          const videoUrl = getVideoUrl(item.FILE_PATH);
+          const instagramEmbedUrl = getInstagramEmbedUrl(
+            item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
+          );
 
           return (
             <div className="slide" key={item.CONTENT_ID || i}>
-  <div className="video-frame">
-    {shouldRenderVideo ? (
-      isTikTok ? (
-        <TikTokCard videoId={item.TIKTOK_VIDEO_ID || item.CONTENT_ID} />
-      ) : videoUrl ? (
-        <video
-          ref={(el) => {
-            if (el) {
-              videoRefs.current[item.CONTENT_ID] = el;
-            } else {
-              delete videoRefs.current[item.CONTENT_ID];
-            }
-          }}
-          className="content-video"
-          src={videoUrl}
-          muted
-          autoPlay={i === index}
-          loop
-          playsInline
-          controls={false}
-          preload={i === index ? "auto" : "none"}
-          onClick={() => togglePlayPause(item.CONTENT_ID)}
-          onLoadedData={() => {
-            if (i === index) {
-              const video = videoRefs.current[item.CONTENT_ID];
-              if (video) {
-                video.muted = true;
-                video.play().catch((err) => {
-                  console.log("로드 후 재생 실패:", err);
-                });
-              }
-            }
-          }}
-          onTimeUpdate={() => handleTimeUpdate(item.CONTENT_ID)}
-          onLoadedMetadata={() => handleLoadedMetadata(item.CONTENT_ID)}
-        />
-      ) : (
-        <div className="content-video">영상 주소가 없습니다.</div>
-      )
-    ) : (
-      <div className="content-video" />
-    )}
-                
+              <div className="video-frame">
+                {shouldRenderVideo ? (
+                  isTikTok ? (
+                    item.FILE_PATH ? (
+                      <div className="embed-crop tiktok-crop">
+                        <iframe
+                          src={item.FILE_PATH}   // 🔥 DB에 있는 embed URL 그대로
+                          title={item.TITLE || "tiktok embed"}
+                          className="embed-frame tiktok-frame"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <div className="content-video">틱톡 주소 없음</div>
+                    )
+                  ) : isInstagram ? (
+                    instagramEmbedUrl ? (
+                      <div className="embed-crop instagram-crop">
+                        <iframe
+                          src={instagramEmbedUrl}
+                          title={item.TITLE || "instagram embed"}
+                          className="embed-frame instagram-frame"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <div className="content-video">인스타그램 주소가 없습니다.</div>
+                    )
+                  ) : videoUrl ? (
+                    <video
+                      ref={(el) => {
+                        if (el) {
+                          videoRefs.current[item.CONTENT_ID] = el;
+                        } else {
+                          delete videoRefs.current[item.CONTENT_ID];
+                        }
+                      }}
+                      className="content-video"
+                      src={videoUrl}
+                      muted
+                      autoPlay={i === index}
+                      loop
+                      playsInline
+                      controls={false}
+                      preload={i === index ? "auto" : "none"}
+                      onClick={() => togglePlayPause(item.CONTENT_ID)}
+                      onLoadedData={() => {
+                        if (i === index) {
+                          const video = videoRefs.current[item.CONTENT_ID];
+                          if (video) {
+                            video.muted = true;
+                            video.play().catch((err) => {
+                              console.log("로드 후 재생 실패:", err);
+                            });
+                          }
+                        }
+                      }}
+                      onTimeUpdate={() => handleTimeUpdate(item.CONTENT_ID)}
+                      onLoadedMetadata={() => handleLoadedMetadata(item.CONTENT_ID)}
+                    />
+                  ) : (
+                    <div className="content-video">영상 주소가 없습니다.</div>
+                  )
+                ) : (
+                  <div className="content-video" />
+                )}
+
                 <div className="video-progress">
                   <div
                     className="video-progress-fill"
@@ -459,12 +502,7 @@ const ImageSlider = () => {
         })}
       </div>
 
-      {activeItem && (
-        <div className="viewer-bottom-summary">
-          <strong>지금 보고 있는 밈</strong>
-          <span>{activeItem.TITLE || "제목 없음"}</span>
-        </div>
-      )}
+    
     </div>
   );
 };

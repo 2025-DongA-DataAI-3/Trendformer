@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import "./Search.css";
 
+
 const STORAGE_KEY = "searchHistory";
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
@@ -107,6 +108,18 @@ const Search = () => {
     }
 
     return `http://localhost:3002/uploads/${filePath}`;
+  };
+
+  const getInstagramEmbedUrl = (url) => {
+    if (!url) return "";
+
+    const cleanUrl = url.trim();
+
+    if (cleanUrl.includes("/embed")) return cleanUrl;
+
+    return cleanUrl.endsWith("/")
+      ? `${cleanUrl}embed`
+      : `${cleanUrl}/embed`;
   };
 
   const saveHistory = (keyword) => {
@@ -437,13 +450,31 @@ const Search = () => {
                 key={item.CONTENT_ID || index}
                 onClick={() => openVideoModal(item)}
               >
-                <video
-                  src={getVideoUrl(item.FILE_PATH)}
-                  className="tf-search-card-video"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+                {item.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
+                  <iframe
+                    src={getInstagramEmbedUrl(
+                      item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
+                    )}
+                    className="tf-search-card-video instagram-card-frame"
+                    title={item.TITLE || "instagram card"}
+                    allowFullScreen
+                  />
+                ) : item.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
+                  <iframe
+                    src={item.FILE_PATH}
+                    className="tf-search-card-video tiktok-card-frame"
+                    title={item.TITLE || "tiktok card"}
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    src={getVideoUrl(item.FILE_PATH)}
+                    className="tf-search-card-video"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                )}
 
                 <div className="tf-search-card-overlay" />
 
@@ -493,26 +524,54 @@ const Search = () => {
               <X size={22} />
             </button>
 
-            <div className="tf-video-modal-player-wrap">
-              <video
-                src={getVideoUrl(selectedVideo.FILE_PATH)}
-                className="tf-video-modal-video"
-                controls
-                autoPlay
-                playsInline
-              />
+            <div
+              className={`tf-video-modal-player-wrap ${selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
+                ? "instagram-modal"
+                : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
+                  ? "tiktok-modal"
+                  : ""
+                }`}
+            >
+              {
+                selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
+                  <iframe
+                    src={getInstagramEmbedUrl(
+                      selectedVideo.ORIGINAL_URL ||
+                      selectedVideo.ORIGINAL_LINK ||
+                      selectedVideo.FILE_PATH
+                    )}
+                    className="tf-video-modal-video instagram-modal-frame"
+                    title="instagram modal"
+                    allowFullScreen
+                  />
+                ) : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
+                  <iframe
+                    src={selectedVideo.FILE_PATH}
+                    className="tf-video-modal-video tiktok-modal-frame"
+                    title="tiktok modal"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    src={getVideoUrl(selectedVideo.FILE_PATH)}
+                    className="tf-video-modal-video"
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                )
+              }
 
               <div className="tf-video-modal-floating">
                 <button
                   type="button"
-                  className={`tf-floating-btn ${
-                    getLikeInfo(
-                      selectedVideo.CONTENT_ID,
-                      Number(selectedVideo.LIKES) || 0
-                    ).liked
-                      ? "liked"
-                      : ""
-                  }`}
+                  className={`tf-floating-btn ${getLikeInfo(
+                    selectedVideo.CONTENT_ID,
+                    Number(selectedVideo.LIKES) || 0
+                  ).liked
+                    ? "liked"
+                    : ""
+                    }`}
                   onClick={() => toggleLike(selectedVideo)}
                 >
                   <Heart
@@ -538,9 +597,8 @@ const Search = () => {
 
                 <button
                   type="button"
-                  className={`tf-floating-btn ${
-                    isSaved(selectedVideo.CONTENT_ID) ? "saved" : ""
-                  }`}
+                  className={`tf-floating-btn ${isSaved(selectedVideo.CONTENT_ID) ? "saved" : ""
+                    }`}
                   onClick={() => toggleSave(selectedVideo)}
                 >
                   <Bookmark
