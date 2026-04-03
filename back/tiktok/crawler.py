@@ -153,7 +153,7 @@ def get_keywords_from_db():
 async def main():
     target_tags = get_keywords_from_db()
     print(f"DB에서 키워드 {len(target_tags)}개 로드됨: {target_tags}")
-    per_tag_count = 50
+    per_tag_count = 5
 
     existing_urls = get_existing_urls()
     print(f"📦 기존 URL {len(existing_urls)}개 로드됨")
