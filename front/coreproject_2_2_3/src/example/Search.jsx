@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import "./Search.css";
 
-
 const STORAGE_KEY = "searchHistory";
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
@@ -117,9 +116,7 @@ const Search = () => {
 
     if (cleanUrl.includes("/embed")) return cleanUrl;
 
-    return cleanUrl.endsWith("/")
-      ? `${cleanUrl}embed`
-      : `${cleanUrl}/embed`;
+    return cleanUrl.endsWith("/") ? `${cleanUrl}embed` : `${cleanUrl}/embed`;
   };
 
   const saveHistory = (keyword) => {
@@ -131,7 +128,47 @@ const Search = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const handleSearch = (keyword = query) => {
+  const saveSearchLogToServer = async (keyword) => {
+    const trimmed = keyword.trim();
+    if (!trimmed) return false;
+
+    try {
+      const storedLoginUser = localStorage.getItem("user");
+      const loginUser = storedLoginUser ? JSON.parse(storedLoginUser) : null;
+
+      if (!loginUser || !(loginUser.USER_ID || loginUser.id)) {
+        console.log("로그인 사용자 정보 없음 → 검색 로그 저장 안함");
+        return false;
+      }
+
+      const res = await fetch("http://localhost:3002/search/log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: loginUser.USER_ID || loginUser.id,
+          keyword_id: null,
+          search_word: trimmed,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("검색 로그 저장 응답:", data);
+
+      if (!res.ok) {
+        console.error("검색 로그 저장 실패:", data);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("검색 로그 저장 실패:", err);
+      return false;
+    }
+  };
+
+  const handleSearch = async (keyword = query) => {
     const trimmed = keyword.trim();
 
     if (!trimmed) {
@@ -142,6 +179,7 @@ const Search = () => {
     }
 
     saveHistory(trimmed);
+    await saveSearchLogToServer(trimmed);
     setQuery(trimmed);
     setShowSuggestPanel(false);
 
@@ -160,9 +198,9 @@ const Search = () => {
     setFilteredContents(shuffleArray(result));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    handleSearch();
+    await handleSearch();
   };
 
   const handleDeleteHistoryItem = (keyword) => {
@@ -180,6 +218,11 @@ const Search = () => {
     setQuery("");
     setFilteredContents(shuffleArray(contents));
     setShowSuggestPanel(false);
+  };
+
+  const handleAutoCompleteClick = async (keyword) => {
+    setQuery(keyword);
+    await handleSearch(keyword);
   };
 
   const openVideoModal = (item) => {
@@ -299,6 +342,41 @@ const Search = () => {
 
   const suggestionHistory = history.slice(0, 6);
   const suggestionAi = personalizedKeywords.slice(0, 4);
+
+  const autoCompleteSuggestions = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+
+    if (!trimmed) return [];
+
+    const collected = [];
+
+    contents.forEach((item) => {
+      const candidates = [
+        item.TITLE,
+        item.KEYWORDS,
+        item.PLATFORM_TYPE,
+        item.USER_ID,
+        item.CONTENT_ID,
+      ];
+
+      candidates.forEach((value) => {
+        if (!value) return;
+
+        String(value)
+          .split(",")
+          .map((text) => text.trim())
+          .filter(Boolean)
+          .forEach((text) => {
+            if (text.toLowerCase().includes(trimmed)) {
+              collected.push(text);
+            }
+          });
+      });
+    });
+
+    const unique = [...new Set(collected)];
+    return unique.slice(0, 8);
+  }, [query, contents]);
 
   return (
     <div className="tf-search-page">
@@ -423,6 +501,39 @@ const Search = () => {
                   ))}
                 </div>
               </section>
+
+              <section className="tf-suggest-section auto-block">
+                <div className="tf-suggest-head">
+                  <div className="tf-suggest-title-wrap">
+                    <SearchIcon size={16} />
+                    <h3>자동완성</h3>
+                  </div>
+                </div>
+
+                {query.trim() ? (
+                  autoCompleteSuggestions.length > 0 ? (
+                    <div className="tf-ai-list">
+                      {autoCompleteSuggestions.map((item, index) => (
+                        <button
+                          type="button"
+                          className="tf-ai-item"
+                          key={`${item}-${index}`}
+                          onClick={() => handleAutoCompleteClick(item)}
+                        >
+                          <span className="tf-ai-keyword">{item}</span>
+                          <span className="tf-ai-reason">자동완성</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="tf-empty-text">자동완성 결과가 없습니다.</p>
+                  )
+                ) : (
+                  <p className="tf-empty-text">
+                    검색어를 입력하면 자동완성 목록이 표시됩니다.
+                  </p>
+                )}
+              </section>
             </div>
           </div>
         )}
@@ -525,53 +636,53 @@ const Search = () => {
             </button>
 
             <div
-              className={`tf-video-modal-player-wrap ${selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
-                ? "instagram-modal"
-                : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
+              className={`tf-video-modal-player-wrap ${
+                selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
+                  ? "instagram-modal"
+                  : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
                   ? "tiktok-modal"
                   : ""
-                }`}
+              }`}
             >
-              {
-                selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
-                  <iframe
-                    src={getInstagramEmbedUrl(
-                      selectedVideo.ORIGINAL_URL ||
+              {selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
+                <iframe
+                  src={getInstagramEmbedUrl(
+                    selectedVideo.ORIGINAL_URL ||
                       selectedVideo.ORIGINAL_LINK ||
                       selectedVideo.FILE_PATH
-                    )}
-                    className="tf-video-modal-video instagram-modal-frame"
-                    title="instagram modal"
-                    allowFullScreen
-                  />
-                ) : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
-                  <iframe
-                    src={selectedVideo.FILE_PATH}
-                    className="tf-video-modal-video tiktok-modal-frame"
-                    title="tiktok modal"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video
-                    src={getVideoUrl(selectedVideo.FILE_PATH)}
-                    className="tf-video-modal-video"
-                    controls
-                    autoPlay
-                    playsInline
-                  />
-                )
-              }
+                  )}
+                  className="tf-video-modal-video instagram-modal-frame"
+                  title="instagram modal"
+                  allowFullScreen
+                />
+              ) : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
+                <iframe
+                  src={selectedVideo.FILE_PATH}
+                  className="tf-video-modal-video tiktok-modal-frame"
+                  title="tiktok modal"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  src={getVideoUrl(selectedVideo.FILE_PATH)}
+                  className="tf-video-modal-video"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              )}
 
               <div className="tf-video-modal-floating">
                 <button
                   type="button"
-                  className={`tf-floating-btn ${getLikeInfo(
-                    selectedVideo.CONTENT_ID,
-                    Number(selectedVideo.LIKES) || 0
-                  ).liked
-                    ? "liked"
-                    : ""
-                    }`}
+                  className={`tf-floating-btn ${
+                    getLikeInfo(
+                      selectedVideo.CONTENT_ID,
+                      Number(selectedVideo.LIKES) || 0
+                    ).liked
+                      ? "liked"
+                      : ""
+                  }`}
                   onClick={() => toggleLike(selectedVideo)}
                 >
                   <Heart
@@ -597,8 +708,9 @@ const Search = () => {
 
                 <button
                   type="button"
-                  className={`tf-floating-btn ${isSaved(selectedVideo.CONTENT_ID) ? "saved" : ""
-                    }`}
+                  className={`tf-floating-btn ${
+                    isSaved(selectedVideo.CONTENT_ID) ? "saved" : ""
+                  }`}
                   onClick={() => toggleSave(selectedVideo)}
                 >
                   <Bookmark

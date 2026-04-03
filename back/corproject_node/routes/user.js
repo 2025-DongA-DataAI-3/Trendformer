@@ -55,7 +55,6 @@ router.post('/join', (req, res) => {
   })
 })
 
-
 // 로그인
 router.post('/login', (req, res) => {
   let id = req.body.id
@@ -73,6 +72,16 @@ router.post('/login', (req, res) => {
 
     if (rows.length > 0) {
       const user = rows[0]
+
+      req.session.user = {
+        USER_ID: user.USER_ID,
+        PW: user.PW,
+        NICK: user.NICK,
+        EMAIL: user.EMAIL,
+        COMPANY_NAME: user.COMPANY_NAME
+      }
+
+      console.log("로그인 세션 저장 완료:", req.session.user)
 
       return res.json({
         success: true,
@@ -92,7 +101,6 @@ router.post('/login', (req, res) => {
     }
   })
 })
-
 
 // 정보 수정
 router.put('/update', (req, res) => {
@@ -233,6 +241,5 @@ router.delete('/delete', (req, res) => {
     }
   })
 })
-
 
 module.exports = router;
