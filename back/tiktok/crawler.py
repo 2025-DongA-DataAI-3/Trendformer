@@ -143,17 +143,31 @@ def get_keywords_from_db():
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
-            cursor.execute("SELECT KEYWORD_NAME FROM T_KEYWORD")
+            cursor.execute("""
+                SELECT 
+                    tk.KEYWORD_ID,
+                    tk.KEYWORD_NAME,
+                    COUNT(DISTINCT ck.CONTENT_ID) AS content_count
+                FROM T_KEYWORD tk
+                LEFT JOIN CONTENT_KEYWORD ck ON tk.KEYWORD_NAME = ck.KEYWORD
+                GROUP BY tk.KEYWORD_ID, tk.KEYWORD_NAME
+                ORDER BY content_count ASC, tk.KEYWORD_ID ASC
+            """)
             rows = cursor.fetchall()
         conn.close()
-        return [row[0] for row in rows]
+
+        for row in rows:
+            print(f"  📊 [{row[0]}] {row[1]} - 영상 {row[2]}개")
+
+        return [row[1] for row in rows]
     except Exception as e:
         print(f"⚠️ T_KEYWORD 조회 실패: {e}")
+        return []
 
 async def main():
     target_tags = get_keywords_from_db()
     print(f"DB에서 키워드 {len(target_tags)}개 로드됨: {target_tags}")
-    per_tag_count = 5
+    per_tag_count = 80
 
     existing_urls = get_existing_urls()
     print(f"📦 기존 URL {len(existing_urls)}개 로드됨")
@@ -171,6 +185,12 @@ async def main():
             try:
                 await page.goto(f"https://www.tiktok.com/tag/{tag}", wait_until="networkidle")
                 await asyncio.sleep(5)
+
+                # 5초 대기 후 게시물 존재 여부 확인
+                links_check = await page.query_selector_all('a[href*="/video/"]')
+                if not links_check:
+                    print(f"⚠️ #{tag} 게시물 없음, 스킵")
+                    continue
 
                 collected_urls = []
                 prev_count = 0
@@ -196,13 +216,17 @@ async def main():
                         scroll_attempts = 0
                     prev_count = len(collected_urls)
 
+                if not collected_urls:
+                    print(f"⚠️ #{tag} 수집된 URL 없음, 스킵")
+                    continue
+
                 print(f"✅ {len(collected_urls)}개 URL 수집")
 
                 for url in collected_urls:
                     result = await get_post_details(page, url)
                     if result:
                         save_to_db(result["content"], result["like_count"], result["view_count"])
-                    await asyncio.sleep(random.uniform(3, 6))
+                    await asyncio.sleep(random.uniform(2, 4))
 
             except Exception as e:
                 print(f"❌ #{tag} 탐색 실패: {e}")
