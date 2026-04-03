@@ -3,6 +3,7 @@ const app = express()
 const mysql = require("mysql2")
 const { spawn } = require('child_process')
 const path = require('path')
+const { runAiScheduler } = require('./routes/gpt')
 
 const cors = require('cors')
 app.use(cors())
@@ -32,13 +33,15 @@ app.use('/user', userRouter)
 
 
 // 인스타 스케줄러 실행
-const instaScheduler = spawn('python', ['scheduler.py'], {
-  cwd: path.join(__dirname, '..', 'insta'),
-  stdio: 'inherit',
-  shell: true
-})
-instaScheduler.on('error', (err) => { console.error('인스타 스케줄러 오류:', err) })
-instaScheduler.on('close', (code) => { console.log(`인스타 스케줄러 종료, 코드: ${code}`) })
+
+// const instaScheduler = spawn('python', ['scheduler.py'], {
+//     cwd: path.join(__dirname, '..', 'insta'),
+//     stdio: 'inherit',
+//     shell: true
+// })
+// instaScheduler.on('error', (err) => { console.error('인스타 스케줄러 오류:', err) })
+// instaScheduler.on('close', (code) => { console.log(`인스타 스케줄러 종료, 코드: ${code}`) })
+
 
 // 틱톡 스케줄러 실행
 const tiktokScheduler = spawn('python', ['scheduler.py'], {
@@ -246,6 +249,9 @@ app.get("/search-content/:userId", (req, res) => {
     res.json(result);
   });
 });
+
+// 카테고리, 키워드 분류
+runAiScheduler()
 
 app.listen(3002, () => {
   console.log("서버 실행 중: http://localhost:3002")

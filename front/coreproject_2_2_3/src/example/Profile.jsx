@@ -49,6 +49,24 @@ const Profile = () => {
   });
 
   const [deleteText, setDeleteText] = useState("");
+  const isLogin = localStorage.getItem("isLogin") === "true";
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+
+  if (!user) {
+  return (
+    <div style={{ 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center",
+      height: "100vh",
+      color: "#f2fbfb",
+      fontSize: 16
+    }}>
+      로그인이 필요합니다...
+    </div>
+  );
+}
+
 
   useEffect(() => {
     const isLogin = localStorage.getItem("isLogin") === "true";
@@ -399,7 +417,10 @@ const Profile = () => {
     setSelectedItem(null);
   };
 
-  if (!user) return null;
+  if (!user) {
+    navigate("/login");
+    return null;
+}
 
   return (
     <div style={styles.page}>
