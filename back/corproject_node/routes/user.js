@@ -55,7 +55,6 @@ router.post('/join', (req, res) => {
   })
 })
 
-
 // 로그인
 router.post('/login', (req, res) => {
   let id = req.body.id
@@ -72,27 +71,37 @@ router.post('/login', (req, res) => {
     }
 
     if (rows.length > 0) {
-      const user = rows[0];
+      const user = rows[0]
 
-      // 🔥 필터 키워드 조회
+      req.session.user = {
+        USER_ID: user.USER_ID,
+        PW: user.PW,
+        NICK: user.NICK,
+        EMAIL: user.EMAIL,
+        COMPANY_NAME: user.COMPANY_NAME
+      }
+
+      console.log("로그인 세션 저장 완료:", req.session.user)
+
+      // 필터 키워드 조회
       const filterSql = `
-    SELECT cfk.KEYWORD
-    FROM C_FILTER cf
-    JOIN C_FILTER_KEYWORD cfk
-      ON cf.FILTER_ID = cfk.FILTER_ID
-    WHERE cf.USER_ID = ?
-  `;
+        SELECT cfk.KEYWORD
+        FROM C_FILTER cf
+        JOIN C_FILTER_KEYWORD cfk
+          ON cf.FILTER_ID = cfk.FILTER_ID
+        WHERE cf.USER_ID = ?
+      `
 
       conn.query(filterSql, [user.USER_ID], (err2, filterRows) => {
         if (err2) {
-          console.error("필터 조회 에러:", err2);
+          console.error("필터 조회 에러:", err2)
           return res.status(500).json({
             success: false,
             message: "필터 조회 실패"
-          });
+          })
         }
 
-        const filtering = filterRows.map(row => row.KEYWORD);
+        const filtering = filterRows.map(row => row.KEYWORD)
 
         return res.json({
           success: true,
@@ -102,10 +111,10 @@ router.post('/login', (req, res) => {
             nickname: user.NICK,
             email: user.EMAIL,
             company: user.COMPANY_NAME,
-            filtering: filtering   // ⭐ 핵심
+            filtering: filtering
           }
-        });
-      });
+        })
+      })
     } else {
       return res.status(401).json({
         success: false,
@@ -114,7 +123,6 @@ router.post('/login', (req, res) => {
     }
   })
 })
-
 
 // 정보 수정
 router.put('/update', (req, res) => {
@@ -255,6 +263,5 @@ router.delete('/delete', (req, res) => {
     }
   })
 })
-
 
 module.exports = router;
