@@ -139,8 +139,20 @@ async def get_post_details(page, url):
         print(f"❌ 추출 실패 ({url}): {e}")
         return None
 
+def get_keywords_from_db():
+    try:
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT KEYWORD_NAME FROM T_KEYWORD")
+            rows = cursor.fetchall()
+        conn.close()
+        return [row[0] for row in rows]
+    except Exception as e:
+        print(f"⚠️ T_KEYWORD 조회 실패: {e}")
+
 async def main():
-    target_tags = ["국내밈", "유머", "짤", "챌린지", "밈"]
+    target_tags = get_keywords_from_db()
+    print(f"DB에서 키워드 {len(target_tags)}개 로드됨: {target_tags}")
     per_tag_count = 50
 
     existing_urls = get_existing_urls()
