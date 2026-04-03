@@ -3,7 +3,7 @@ const app = express()
 const mysql = require("mysql2")
 const { spawn } = require('child_process')
 const path = require('path')
-
+const { runAiScheduler } = require('./routes/gpt')
 
 const cors = require('cors')
 app.use(cors())
@@ -75,6 +75,9 @@ app.get("/content", (req, res) => {
     else { res.json(result) }
   })
 })
+
+// 카테고리, 키워드 분류
+runAiScheduler()
 
 app.listen(3002, () => {
   console.log("서버 실행 중: http://localhost:3002")
