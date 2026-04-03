@@ -54,8 +54,8 @@ def save_to_db(content_item, like_count, view_count):
         with conn.cursor() as cursor:
             content_sql = """
                 INSERT IGNORE INTO TREND_CONTENT
-                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, THUMBNAIL_PATH, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
-                VALUES (UUID(), 'TIKTOK', %s, %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
+                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, CREATOR_NAME, DESCRIPTION, THUMBNAIL_PATH, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
+                VALUES (UUID(), 'TIKTOK', %s, %s, %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
             """
             cursor.execute(content_sql, content_item)
 
@@ -100,7 +100,7 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # 업로드 날짜 추출 (createTime unix timestamp)
+        # 업로드 날짜 추출
         uploaded_at = None
         try:
             content = await page.content()
@@ -112,13 +112,16 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # oEmbed로 제목, 썸네일 추출
+        # oEmbed로 제목, 썸네일, 작성자 추출
         oembed = get_oembed_data(url)
         title = "제목 없음"
         thumbnail = ""
+        creator_name = None
         if oembed:
             title = oembed.get('title', '제목 없음')[:200]
             thumbnail = oembed.get('thumbnail_url', '')
+            creator_name = oembed.get('author_name', '')
+            print(f"👤 작성자: {creator_name}")
 
         # embed URL
         video_id = url.split('/video/')[-1].split('?')[0]
@@ -127,7 +130,7 @@ async def get_post_details(page, url):
         print(f"👍 좋아요: {like_count} | 👁️ 조회수: {view_count}")
 
         return {
-            "content": (url, title, title, thumbnail, embed_url, uploaded_at),
+            "content": (url, title, creator_name, title, thumbnail, embed_url, uploaded_at),
             "like_count": like_count,
             "view_count": view_count
         }
@@ -136,8 +139,20 @@ async def get_post_details(page, url):
         print(f"❌ 추출 실패 ({url}): {e}")
         return None
 
+def get_keywords_from_db():
+    try:
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT KEYWORD_NAME FROM T_KEYWORD")
+            rows = cursor.fetchall()
+        conn.close()
+        return [row[0] for row in rows]
+    except Exception as e:
+        print(f"⚠️ T_KEYWORD 조회 실패: {e}")
+
 async def main():
-    target_tags = ["국내밈", "유머", "짤", "챌린지", "밈"]
+    target_tags = get_keywords_from_db()
+    print(f"DB에서 키워드 {len(target_tags)}개 로드됨: {target_tags}")
     per_tag_count = 50
 
     existing_urls = get_existing_urls()

@@ -54,21 +54,16 @@ const Layout = () => {
         <header className={`tf-top-header ${isHome ? "home-header" : ""}`}>
           <div className="tf-header-row">
             <div className="tf-header-text">
-              <span className="tf-header-eyebrow">{current.eyebrow}</span>
               <NavLink className="tf-title" to="/">
                 {current.title}
               </NavLink>
-              <p className="tf-header-subtitle">{current.subtitle}</p>
             </div>
 
             <div className="tf-header-actions">
-              <button type="button" className="tf-header-icon-btn" aria-label="알림">
-                <Bell size={18} />
-              </button>
+              
 
               <div className="tf-header-badge">
-                <Sparkles size={14} />
-                <span>LIVE</span>
+                
               </div>
             </div>
           </div>
@@ -82,6 +77,7 @@ const Layout = () => {
           <NavLink
             to="/"
             end
+            state={{ reset: true }}
             className={({ isActive }) =>
               isActive ? "tf-bottom-item active" : "tf-bottom-item"
             }

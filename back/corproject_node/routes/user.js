@@ -83,15 +83,37 @@ router.post('/login', (req, res) => {
 
       console.log("로그인 세션 저장 완료:", req.session.user)
 
-      return res.json({
-        success: true,
-        user: {
-          id: user.USER_ID,
-          pw: user.PW,
-          nickname: user.NICK,
-          email: user.EMAIL,
-          company: user.COMPANY_NAME
+      // 필터 키워드 조회
+      const filterSql = `
+        SELECT cfk.KEYWORD
+        FROM C_FILTER cf
+        JOIN C_FILTER_KEYWORD cfk
+          ON cf.FILTER_ID = cfk.FILTER_ID
+        WHERE cf.USER_ID = ?
+      `
+
+      conn.query(filterSql, [user.USER_ID], (err2, filterRows) => {
+        if (err2) {
+          console.error("필터 조회 에러:", err2)
+          return res.status(500).json({
+            success: false,
+            message: "필터 조회 실패"
+          })
         }
+
+        const filtering = filterRows.map(row => row.KEYWORD)
+
+        return res.json({
+          success: true,
+          user: {
+            id: user.USER_ID,
+            pw: user.PW,
+            nickname: user.NICK,
+            email: user.EMAIL,
+            company: user.COMPANY_NAME,
+            filtering: filtering
+          }
+        })
       })
     } else {
       return res.status(401).json({
