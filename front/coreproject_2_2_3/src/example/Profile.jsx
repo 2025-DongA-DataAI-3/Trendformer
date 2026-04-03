@@ -39,6 +39,7 @@ const Profile = () => {
     nickname: "",
     email: "",
     bio: "",
+    filtering: "",
   });
 
   const [pwForm, setPwForm] = useState({
@@ -77,12 +78,16 @@ const Profile = () => {
     }
 
     setUser(storedUser);
+
     setEditForm({
       nickname: storedUser.nickname || "",
       email: storedUser.email || "",
       bio:
         storedUser.bio ||
         "실시간 밈과 숏폼 트렌드를 탐색하고 저장하는 TrendFormer 사용자입니다.",
+      filtering: Array.isArray(storedUser.filtering)
+        ? storedUser.filtering.join(", ")
+        : "",
     });
 
     const storedSavedPosts =
@@ -136,13 +141,18 @@ const Profile = () => {
 
   const openEditModal = () => {
     if (!user) return;
+
     setEditForm({
       nickname: user.nickname || "",
       email: user.email || "",
       bio:
         user.bio ||
         "실시간 밈과 숏폼 트렌드를 탐색하고 저장하는 TrendFormer 사용자입니다.",
+      filtering: Array.isArray(user.filtering)
+        ? user.filtering.join(", ")
+        : "",
     });
+
     setIsEditOpen(true);
   };
 
@@ -189,31 +199,53 @@ const Profile = () => {
     }));
   };
 
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
+  const handleSaveProfile = async (e) => {
+  e.preventDefault();
 
-    if (!editForm.nickname.trim()) {
-      alert("닉네임을 입력해주세요.");
-      return;
-    }
+  if (!editForm.nickname.trim()) {
+    alert("닉네임을 입력해주세요.");
+    return;
+  }
 
-    if (!editForm.email.trim()) {
-      alert("이메일을 입력해주세요.");
-      return;
-    }
+  if (!editForm.email.trim()) {
+    alert("이메일을 입력해주세요.");
+    return;
+  }
 
-    const updatedUser = {
-      ...user,
-      nickname: editForm.nickname.trim(),
-      email: editForm.email.trim(),
-      bio: editForm.bio.trim(),
-    };
+  const keywords = [...new Set(
+    editForm.filtering
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item !== "")
+  )];
+
+  const updatedUser = {
+    ...user,
+    nickname: editForm.nickname.trim(),
+    email: editForm.email.trim(),
+    bio: editForm.bio.trim(),
+    filtering: keywords,
+  };
+
+  try {
+    await fetch("http://localhost:3002/user/filter", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        keywords,
+      }),
+    });
 
     localStorage.setItem("user", JSON.stringify(updatedUser));
     setUser(updatedUser);
     setIsEditOpen(false);
     showToast("프로필 정보가 저장되었습니다.");
-  };
+  } catch (error) {
+    console.error(error);
+    alert("필터 저장 중 오류가 발생했습니다.");
+  }
+};
 
   const handleSavePassword = async (e) => {
     e.preventDefault();
@@ -301,37 +333,37 @@ const Profile = () => {
     navigate("/login");
   };
 
-const handleDeleteAccount = async () => {
+  const handleDeleteAccount = async () => {
     if (deleteText !== "회원탈퇴") {
-        alert("회원탈퇴를 정확히 입력해주세요.");
-        return;
+      alert("회원탈퇴를 정확히 입력해주세요.");
+      return;
     }
 
     try {
-        const response = await fetch("http://localhost:3002/user/delete", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: user.id }),
-        });
+      const response = await fetch("http://localhost:3002/user/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: user.id }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (data.success) {
-            localStorage.removeItem("user");
-            localStorage.removeItem("isLogin");
-            localStorage.removeItem("searchHistory");
-            localStorage.removeItem("savedPosts");
-            localStorage.removeItem("postLikes");
+      if (data.success) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("isLogin");
+        localStorage.removeItem("searchHistory");
+        localStorage.removeItem("savedPosts");
+        localStorage.removeItem("postLikes");
 
-            alert("회원 탈퇴가 완료되었습니다.");
-            navigate("/join");
-        } else {
-            alert(data.message || "회원탈퇴에 실패했습니다.");
-        }
+        alert("회원 탈퇴가 완료되었습니다.");
+        navigate("/join");
+      } else {
+        alert(data.message || "회원탈퇴에 실패했습니다.");
+      }
     } catch (error) {
-        alert("서버 오류가 발생했습니다.");
+      alert("서버 오류가 발생했습니다.");
     }
-};
+  };
 
   const removeSavedItem = (postId) => {
     const updated = savedPosts.filter((item) => item.id !== postId);
@@ -367,9 +399,9 @@ const handleDeleteAccount = async () => {
     const updatedSavedPosts = savedPosts.map((post) =>
       post.id === item.id
         ? {
-            ...post,
-            saves: updatedLikes[item.id].count,
-          }
+          ...post,
+          saves: updatedLikes[item.id].count,
+        }
         : post
     );
 
@@ -672,6 +704,21 @@ const handleDeleteAccount = async () => {
                 />
               </div>
 
+
+
+              {/* 바로 여기 아래 */}
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>필터링</label>
+                <input
+                  type="text"
+                  name="filtering"
+                  value={editForm.filtering}
+                  onChange={handleEditChange}
+                  placeholder="예: 고양이, 먹방, 챌린지"
+                  style={styles.input}
+                />
+              </div>
+
               <div style={styles.modalActionRow}>
                 <button type="button" style={styles.cancelBtn} onClick={closeEditModal}>
                   취소
@@ -917,9 +964,10 @@ const handleDeleteAccount = async () => {
 const styles = {
   page: {
     padding: "0 16px 28px",
-    color: "#f2fbfb",
+    color: "#12202b",
     boxSizing: "border-box",
   },
+
   heroCard: {
     position: "relative",
     overflow: "hidden",
@@ -927,19 +975,22 @@ const styles = {
     borderRadius: 26,
     marginBottom: 18,
     background:
-      "linear-gradient(180deg, rgba(13, 22, 34, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%)",
-    border: "1px solid rgba(255,255,255,0.08)",
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,250,252,0.98) 100%)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
     boxShadow:
-      "0 16px 36px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)",
+      "0 16px 36px rgba(31,52,67,0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
   },
+
   heroTop: {
     display: "flex",
     gap: 14,
     alignItems: "flex-start",
   },
+
   avatarWrap: {
     flexShrink: 0,
   },
+
   avatarOuter: {
     position: "relative",
     width: 84,
@@ -948,6 +999,7 @@ const styles = {
     overflow: "hidden",
     boxShadow: "0 10px 24px rgba(35,157,160,0.18)",
   },
+
   avatar: {
     width: "100%",
     height: "100%",
@@ -959,12 +1011,14 @@ const styles = {
     fontSize: 36,
     fontWeight: 800,
   },
+
   avatarImage: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
     display: "block",
   },
+
   avatarEditBtn: {
     position: "absolute",
     right: 6,
@@ -972,18 +1026,20 @@ const styles = {
     width: 28,
     height: 28,
     borderRadius: 999,
-    border: "none",
-    background: "rgba(0,0,0,0.68)",
-    color: "#fff",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    background: "rgba(255,255,255,0.88)",
+    color: "#12202b",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
   },
+
   profileMain: {
     minWidth: 0,
     flex: 1,
   },
+
   nameRow: {
     display: "flex",
     flexWrap: "wrap",
@@ -991,13 +1047,15 @@ const styles = {
     gap: 8,
     marginBottom: 6,
   },
+
   name: {
     margin: 0,
     fontSize: 24,
     fontWeight: 800,
     letterSpacing: "-0.04em",
-    color: "#f4fbfb",
+    color: "#12202b",
   },
+
   badge: {
     display: "inline-flex",
     alignItems: "center",
@@ -1005,78 +1063,92 @@ const styles = {
     padding: "5px 10px",
     borderRadius: 999,
     background: "rgba(63,208,201,0.12)",
-    color: "#9df1eb",
+    color: "#1f8a8a",
     fontSize: 11,
     fontWeight: 700,
     textTransform: "uppercase",
+    border: "1px solid rgba(63,208,201,0.16)",
   },
+
   handle: {
     margin: "0 0 8px",
-    color: "#9fc1c8",
+    color: "#6f8892",
     fontSize: 14,
   },
+
   bio: {
     margin: 0,
-    color: "#d7e6e9",
+    color: "#5f7785",
     fontSize: 14,
     lineHeight: 1.6,
   },
+
   userInfoBox: {
     marginTop: 12,
     display: "grid",
     gap: 8,
   },
+
   userInfoItem: {
     display: "flex",
     justifyContent: "space-between",
     gap: 10,
     padding: "10px 12px",
     borderRadius: 14,
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.94)",
+    border: "1px solid rgba(17,38,52,0.06)",
   },
+
   userInfoLabel: {
-    color: "#8ea5ad",
+    color: "#6f8892",
     fontSize: 12,
     fontWeight: 700,
   },
+
   userInfoValue: {
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 12,
     fontWeight: 700,
     textAlign: "right",
     wordBreak: "break-all",
   },
+
   statGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: 10,
     marginTop: 16,
   },
+
   statCard: {
     padding: "14px 10px",
     borderRadius: 18,
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(17,38,52,0.06)",
     textAlign: "center",
+    boxShadow: "0 8px 18px rgba(31,52,67,0.05)",
   },
+
   statLabel: {
     display: "block",
-    color: "#8ea5ad",
+    color: "#6f8892",
     fontSize: 12,
     fontWeight: 700,
     marginBottom: 6,
   },
+
   statValue: {
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 20,
     fontWeight: 800,
   },
+
   actionRow: {
     display: "flex",
     gap: 10,
     marginTop: 12,
   },
+
   primaryActionBtn: {
     flex: 1,
     height: 46,
@@ -1094,10 +1166,12 @@ const styles = {
     background: "linear-gradient(135deg, #16767b 0%, #239da0 48%, #6be4da 100%)",
     boxShadow: "0 10px 20px rgba(35,157,160,0.22)",
   },
+
   primaryActionBtnLiked: {
-    color: "#08111b",
-    background: "#dffffd",
+    color: "#ffffff",
+    background: "linear-gradient(135deg, #de6483 0%, #ff7e9d 100%)",
   },
+
   secondaryActionBtn: {
     flex: 1,
     height: 46,
@@ -1110,10 +1184,11 @@ const styles = {
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 800,
-    color: "#e5f4f4",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    color: "#12202b",
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(17,38,52,0.08)",
   },
+
   ghostActionBtn: {
     flex: 1,
     height: 44,
@@ -1126,10 +1201,11 @@ const styles = {
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 800,
-    color: "#dce8ea",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    color: "#12202b",
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(17,38,52,0.08)",
   },
+
   dangerActionBtn: {
     flex: 1,
     height: 44,
@@ -1142,22 +1218,24 @@ const styles = {
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 800,
-    color: "#ffb5c3",
-    background: "rgba(255, 90, 122, 0.08)",
-    border: "1px solid rgba(255, 90, 122, 0.18)",
+    color: "#d94c6a",
+    background: "rgba(255, 106, 137, 0.08)",
+    border: "1px solid rgba(255, 106, 137, 0.18)",
   },
+
   tabSection: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: 10,
     marginBottom: 18,
   },
+
   tab: {
     height: 46,
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#a5b8bd",
+    border: "1px solid rgba(17,38,52,0.08)",
+    background: "rgba(255,255,255,0.78)",
+    color: "#7a909c",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1166,57 +1244,65 @@ const styles = {
     fontSize: 14,
     fontWeight: 800,
   },
+
   tabActive: {
-    color: "#dffffd",
-    background: "rgba(63,208,201,0.1)",
-    border: "1px solid rgba(126,243,234,0.18)",
+    color: "#1f8a8a",
+    background: "rgba(63,208,201,0.12)",
+    border: "1px solid rgba(63,208,201,0.18)",
   },
+
   sectionHead: {
     marginBottom: 12,
   },
+
   sectionTitle: {
     margin: 0,
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 20,
     fontWeight: 800,
     letterSpacing: "-0.03em",
   },
+
   sectionSub: {
     margin: "6px 0 0",
-    color: "#9db2b9",
+    color: "#6f8892",
     fontSize: 13,
     lineHeight: 1.6,
   },
+
   cardGrid: {
     display: "grid",
     gap: 14,
   },
+
   card: {
     overflow: "hidden",
     borderRadius: 22,
     background:
-      "linear-gradient(180deg, rgba(13, 22, 34, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow:
-      "0 16px 36px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)",
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,250,252,0.98) 100%)",
+    border: "1px solid rgba(17,38,52,0.08)",
+    boxShadow: "0 16px 36px rgba(31,52,67,0.08)",
   },
+
   cardMediaButton: {
     position: "relative",
     width: "100%",
     height: 220,
     border: "none",
     padding: 0,
-    background: "#000",
+    background: "#dfe8ed",
     cursor: "pointer",
     overflow: "hidden",
   },
+
   cardImage: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
     display: "block",
-    background: "#000",
+    background: "#dfe8ed",
   },
+
   cardBadge: {
     position: "absolute",
     top: 12,
@@ -1226,12 +1312,13 @@ const styles = {
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
-    background: "rgba(63, 208, 201, 0.16)",
-    border: "1px solid rgba(126,243,234,0.16)",
-    color: "#e2fffd",
+    background: "rgba(255,255,255,0.84)",
+    border: "1px solid rgba(63,208,201,0.16)",
+    color: "#1f8a8a",
     fontSize: 11,
     fontWeight: 800,
   },
+
   cardPlayBadge: {
     position: "absolute",
     right: 12,
@@ -1242,48 +1329,54 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    color: "#ffffff",
+    color: "#12202b",
     fontSize: 12,
     fontWeight: 800,
-    background: "rgba(0,0,0,0.48)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid rgba(17,38,52,0.08)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
   },
+
   cardBody: {
     padding: 16,
   },
+
   cardTitle: {
     margin: 0,
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 17,
     fontWeight: 800,
     lineHeight: 1.4,
   },
+
   cardDesc: {
     margin: "8px 0 0",
-    color: "#9db2b9",
+    color: "#6f8892",
     fontSize: 13,
     lineHeight: 1.6,
   },
+
   tagWrap: {
     display: "flex",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
   },
+
   tag: {
     height: 28,
     padding: "0 10px",
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
-    color: "#d7fffc",
+    color: "#1f8a8a",
     background: "rgba(63,208,201,0.08)",
     border: "1px solid rgba(63,208,201,0.14)",
     fontSize: 12,
     fontWeight: 700,
   },
+
   metaRow: {
     display: "flex",
     alignItems: "center",
@@ -1291,13 +1384,14 @@ const styles = {
     gap: 10,
     marginTop: 14,
   },
+
   metaButton: {
     height: 36,
     padding: "0 12px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#f4fbfb",
+    border: "1px solid rgba(17,38,52,0.08)",
+    background: "rgba(255,255,255,0.96)",
+    color: "#12202b",
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
@@ -1305,76 +1399,88 @@ const styles = {
     fontSize: 12,
     fontWeight: 800,
   },
+
   metaButtonLiked: {
-    color: "#ff7f9d",
+    color: "#d95a78",
     border: "1px solid rgba(255,127,157,0.22)",
     background: "rgba(255,127,157,0.08)",
   },
+
   metaText: {
-    color: "#8ea5ad",
+    color: "#6f8892",
     fontSize: 12,
     fontWeight: 700,
   },
+
   emptyBox: {
     padding: "34px 18px",
     borderRadius: 22,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.72)",
+    border: "1px solid rgba(17,38,52,0.06)",
     textAlign: "center",
   },
+
   emptyIconWrap: {
     width: 54,
     height: 54,
     margin: "0 auto 14px",
     borderRadius: 18,
     background: "rgba(63,208,201,0.1)",
-    color: "#dffffd",
+    color: "#1f8a8a",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
+
   emptyTitle: {
     margin: 0,
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 18,
     fontWeight: 800,
   },
+
   emptyDesc: {
     margin: "8px 0 0",
-    color: "#9db2b9",
+    color: "#6f8892",
     fontSize: 13,
     lineHeight: 1.6,
   },
+
   modalOverlay: {
     position: "fixed",
     inset: 0,
     zIndex: 999,
-    background: "rgba(0,0,0,0.76)",
+    background: "rgba(15,24,32,0.62)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
     boxSizing: "border-box",
   },
+
   modalBox: {
     width: "100%",
     maxWidth: 520,
     borderRadius: 22,
     padding: 18,
     background:
-      "linear-gradient(180deg, rgba(13, 22, 34, 0.98) 0%, rgba(10, 18, 28, 1) 100%)",
-    border: "1px solid rgba(255,255,255,0.08)",
+      "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(244,249,251,1) 100%)",
+    border: "1px solid rgba(17,38,52,0.08)",
     boxSizing: "border-box",
+    boxShadow: "0 18px 40px rgba(31,52,67,0.14)",
   },
+
   detailModalBox: {
     position: "relative",
     width: "100%",
     maxWidth: 520,
     borderRadius: 22,
     overflow: "hidden",
-    background: "#0b0f14",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "#ffffff",
+    border: "1px solid rgba(17,38,52,0.08)",
+    boxShadow: "0 18px 40px rgba(31,52,67,0.14)",
   },
+
   modalHeader: {
     display: "flex",
     alignItems: "center",
@@ -1382,24 +1488,27 @@ const styles = {
     gap: 12,
     marginBottom: 16,
   },
+
   modalTitle: {
     margin: 0,
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 20,
     fontWeight: 800,
   },
+
   modalCloseBtn: {
     width: 38,
     height: 38,
     borderRadius: 999,
-    border: "none",
-    background: "rgba(255,255,255,0.04)",
-    color: "#fff",
+    border: "1px solid rgba(17,38,52,0.08)",
+    background: "rgba(255,255,255,0.84)",
+    color: "#12202b",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
   },
+
   modalCloseFloatingBtn: {
     position: "absolute",
     top: 10,
@@ -1408,71 +1517,80 @@ const styles = {
     width: 38,
     height: 38,
     borderRadius: 999,
-    border: "none",
-    background: "rgba(0,0,0,0.45)",
-    color: "#fff",
+    border: "1px solid rgba(17,38,52,0.08)",
+    background: "rgba(255,255,255,0.88)",
+    color: "#12202b",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
   },
+
   form: {
     display: "grid",
     gap: 14,
   },
+
   inputGroup: {
     display: "grid",
     gap: 8,
   },
+
   label: {
-    color: "#dfe9eb",
+    color: "#243b4a",
     fontSize: 13,
     fontWeight: 700,
   },
+
   input: {
     width: "100%",
     boxSizing: "border-box",
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#f2fbfb",
+    border: "1px solid rgba(17,38,52,0.10)",
+    background: "rgba(255,255,255,0.96)",
+    color: "#12202b",
     padding: "14px 16px",
     outline: "none",
     fontSize: 14,
   },
+
   disabledInput: {
-    color: "#8ea5ad",
-    background: "rgba(255,255,255,0.02)",
+    color: "#7a909c",
+    background: "rgba(244,249,251,0.92)",
   },
+
   textarea: {
     width: "100%",
     minHeight: 120,
     resize: "vertical",
     boxSizing: "border-box",
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#f2fbfb",
+    border: "1px solid rgba(17,38,52,0.10)",
+    background: "rgba(255,255,255,0.96)",
+    color: "#12202b",
     padding: "14px 16px",
     outline: "none",
     fontSize: 14,
   },
+
   modalActionRow: {
     display: "flex",
     gap: 10,
     marginTop: 4,
   },
+
   cancelBtn: {
     flex: 1,
     height: 46,
     borderRadius: 15,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#e5f4f4",
+    border: "1px solid rgba(17,38,52,0.08)",
+    background: "rgba(255,255,255,0.96)",
+    color: "#12202b",
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 800,
   },
+
   saveBtn: {
     flex: 1,
     height: 46,
@@ -1484,25 +1602,29 @@ const styles = {
     fontSize: 14,
     fontWeight: 800,
   },
+
   deleteNoticeBox: {
     padding: 14,
     borderRadius: 18,
     marginBottom: 14,
-    background: "rgba(255, 90, 122, 0.08)",
-    border: "1px solid rgba(255, 90, 122, 0.16)",
+    background: "rgba(255, 106, 137, 0.08)",
+    border: "1px solid rgba(255, 106, 137, 0.16)",
   },
+
   deleteTitle: {
     margin: 0,
-    color: "#ffd4dd",
+    color: "#c84d6a",
     fontSize: 16,
     fontWeight: 800,
   },
+
   deleteDesc: {
     margin: "8px 0 0",
-    color: "#ffcad5",
+    color: "#a45d70",
     fontSize: 13,
     lineHeight: 1.6,
   },
+
   deleteConfirmBtn: {
     flex: 1,
     height: 46,
@@ -1514,23 +1636,28 @@ const styles = {
     fontSize: 14,
     fontWeight: 800,
   },
+
   deleteConfirmBtnDisabled: {
     opacity: 0.4,
     cursor: "not-allowed",
   },
+
   detailMediaWrap: {
-    background: "#000",
+    background: "#dfe8ed",
   },
+
   detailMedia: {
     width: "100%",
     maxHeight: "72vh",
     objectFit: "contain",
     display: "block",
-    background: "#000",
+    background: "#dfe8ed",
   },
+
   detailInfoBox: {
     padding: 20,
   },
+
   detailHeaderRow: {
     display: "flex",
     alignItems: "center",
@@ -1538,11 +1665,13 @@ const styles = {
     gap: 12,
     marginBottom: 14,
   },
+
   detailUserBlock: {
     display: "flex",
     alignItems: "center",
     gap: 10,
   },
+
   detailAvatar: {
     width: 42,
     height: 42,
@@ -1555,49 +1684,57 @@ const styles = {
     fontSize: 18,
     fontWeight: 800,
   },
+
   detailUserName: {
     display: "block",
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 15,
   },
+
   detailSubText: {
     margin: "2px 0 0",
-    color: "#96acb2",
+    color: "#6f8892",
     fontSize: 12,
   },
+
   detailDate: {
-    color: "#96acb2",
+    color: "#6f8892",
     fontSize: 12,
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
     whiteSpace: "nowrap",
   },
+
   detailTitle: {
     margin: 0,
-    color: "#f4fbfb",
+    color: "#12202b",
     fontSize: 20,
     lineHeight: 1.35,
   },
+
   detailDesc: {
     margin: "8px 0 0",
-    color: "#9fb5bb",
+    color: "#6f8892",
     fontSize: 13,
     lineHeight: 1.7,
   },
+
   detailActionRow: {
     display: "flex",
     gap: 10,
     marginTop: 16,
   },
+
   originalLink: {
     display: "inline-block",
     marginTop: 14,
-    color: "#6be4da",
+    color: "#1f8a8a",
     textDecoration: "none",
     fontSize: 13,
     fontWeight: 700,
   },
+
   toast: {
     position: "fixed",
     left: "50%",
@@ -1606,12 +1743,12 @@ const styles = {
     zIndex: 1200,
     padding: "12px 16px",
     borderRadius: 999,
-    color: "#08111b",
-    background: "#dffffd",
+    color: "#12202b",
+    background: "rgba(255,255,255,0.94)",
+    border: "1px solid rgba(17,38,52,0.08)",
     fontSize: 13,
     fontWeight: 800,
-    boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
+    boxShadow: "0 10px 24px rgba(31,52,67,0.14)",
   },
 };
-
 export default Profile;

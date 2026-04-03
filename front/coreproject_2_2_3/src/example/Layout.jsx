@@ -1,75 +1,132 @@
 import React from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { House, Grid2x2, Plus, Search, UserRound } from "lucide-react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  Home as HomeIcon,
+  LayoutGrid,
+  PlusSquare,
+  Search as SearchIcon,
+  User,
+  Sparkles,
+  Bell,
+} from "lucide-react";
 import "./Layout.css";
 
 const Layout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path) => {
-    if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
+  const pageTitles = {
+    "/": {
+      eyebrow: "REAL-TIME MEME PLATFORM",
+      title: "TrendFormer",
+      subtitle: "실시간 인기 밈을 가장 직관적으로 탐색하는 숏폼 플랫폼",
+    },
+    "/trend": {
+      eyebrow: "TrendFomer",
+      title: "Category",
+      subtitle: "관심 있는 밈 주제를 빠르게 탐색해보세요",
+    },
+    "/upload": {
+      eyebrow: "TrendFomer",
+      title: "UpLoad",
+      subtitle: "내가 만든 밈 영상과 이미지를 공유해보세요",
+    },
+    "/search": {
+      eyebrow: "TrendFomer",
+      title: "Discover",
+      subtitle: "검색 기록과 추천어로 원하는 밈을 찾아보세요",
+    },
+    "/profile": {
+      eyebrow: "TrendFomer",
+      title: "My Archive",
+      subtitle: "좋아요와 저장한 콘텐츠를 한눈에 관리하세요",
+    },
   };
 
+  const current = pageTitles[location.pathname] || pageTitles["/"];
+  const isHome = location.pathname === "/";
+
   return (
-    <div className="layout-page">
-      <div className="layout-phone-frame">
-        <header className="layout-header">
-          <h1 className="layout-title">TrendFormer</h1>
+    <div className="tf-wrapper">
+      <div className="tf-app-shell">
+        <div className="tf-bg-orb tf-bg-orb-left" />
+        <div className="tf-bg-orb tf-bg-orb-right" />
+
+        <header className={`tf-top-header ${isHome ? "home-header" : ""}`}>
+          <div className="tf-header-row">
+            <div className="tf-header-text">
+              <NavLink className="tf-title" to="/">
+                {current.title}
+              </NavLink>
+            </div>
+
+            <div className="tf-header-actions">
+              
+
+              <div className="tf-header-badge">
+                
+              </div>
+            </div>
+          </div>
         </header>
 
-        <div className="layout-body">
+        <main className="tf-content">
           <Outlet />
-        </div>
+        </main>
 
-        <nav className="layout-bottom-nav">
-          <button
-            type="button"
-            className={`layout-nav-item ${isActive("/") ? "active" : ""}`}
-            onClick={() => navigate("/")}
+        <nav className="tf-bottom-bar">
+          <NavLink
+            to="/"
+            end
+            state={{ reset: true }}
+            className={({ isActive }) =>
+              isActive ? "tf-bottom-item active" : "tf-bottom-item"
+            }
           >
-            <House size={18} />
-            <small>홈</small>
-          </button>
+            <HomeIcon size={20} />
+            <span>홈</span>
+          </NavLink>
 
-          <button
-            type="button"
-            className={`layout-nav-item ${isActive("/trend") ? "active" : ""}`}
-            onClick={() => navigate("/trend")}
+          <NavLink
+            to="/trend"
+            className={({ isActive }) =>
+              isActive ? "tf-bottom-item active" : "tf-bottom-item"
+            }
           >
-            <Grid2x2 size={18} />
-            <small>카테고리</small>
-          </button>
+            <LayoutGrid size={20} />
+            <span>카테고리</span>
+          </NavLink>
 
-          <button
-            type="button"
-            className={`layout-nav-item layout-nav-center ${isActive("/upload") ? "active" : ""}`}
-            onClick={() => navigate("/upload")}
+          <NavLink
+            to="/upload"
+            className={({ isActive }) =>
+              isActive ? "tf-bottom-item tf-upload-item active-upload" : "tf-bottom-item tf-upload-item"
+            }
           >
-            <span className="layout-nav-plus">
-              <Plus size={18} />
-            </span>
-            <small>업로드</small>
-          </button>
+            <div className="tf-upload-icon-wrap">
+              <PlusSquare size={22} />
+            </div>
+            <span>업로드</span>
+          </NavLink>
 
-          <button
-            type="button"
-            className={`layout-nav-item ${isActive("/search") ? "active" : ""}`}
-            onClick={() => navigate("/search")}
+          <NavLink
+            to="/search"
+            className={({ isActive }) =>
+              isActive ? "tf-bottom-item active" : "tf-bottom-item"
+            }
           >
-            <Search size={18} />
-            <small>검색</small>
-          </button>
+            <SearchIcon size={20} />
+            <span>검색</span>
+          </NavLink>
 
-          <button
-            type="button"
-            className={`layout-nav-item ${isActive("/profile") ? "active" : ""}`}
-            onClick={() => navigate("/profile")}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              isActive ? "tf-bottom-item active" : "tf-bottom-item"
+            }
           >
-            <UserRound size={18} />
-            <small>프로필</small>
-          </button>
+            <User size={20} />
+            <span>프로필</span>
+          </NavLink>
         </nav>
       </div>
     </div>

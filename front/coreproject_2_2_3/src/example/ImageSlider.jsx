@@ -9,10 +9,13 @@ import {
 } from "lucide-react";
 import "./ImageSlider.css";
 
+import { useLocation } from "react-router-dom";
+
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
 
 const ImageSlider = () => {
+  const location = useLocation();
   const [index, setIndex] = useState(0);
   const [contents, setContents] = useState([]);
   const [likeState, setLikeState] = useState({});
@@ -24,6 +27,8 @@ const ImageSlider = () => {
   const [isPlaying, setIsPlaying] = useState({});
   const [expandedPost, setExpandedPost] = useState(null);
   const [progressMap, setProgressMap] = useState({});
+
+
 
   const handleTimeUpdate = (contentId) => {
     const video = videoRefs.current[contentId];
@@ -57,8 +62,26 @@ const ImageSlider = () => {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:3002/content")
-      .then((res) => res.json())
+    if (location.state?.reset) {
+      setIndex(0);
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+
+    if (!storedUser?.id) {
+      console.error("로그인한 사용자 정보가 없습니다.");
+      return;
+    }
+
+    fetch(`http://localhost:3002/content/${storedUser.id}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP 오류: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         const safeData = Array.isArray(data) ? data : [];
         setContents(safeData);
@@ -188,29 +211,6 @@ const ImageSlider = () => {
 
     setLikeState(updatedLikes);
     localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
-
-    const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
-
-    if (willLike) {
-      const exists = currentSaved.some((item) => item.id === postId);
-
-      let nextSaved;
-      if (exists) {
-        nextSaved = currentSaved.map((item) =>
-          item.id === postId ? { ...item, saves: next.count } : item
-        );
-      } else {
-        nextSaved = [createSavedPost(post, next.count), ...currentSaved];
-      }
-
-      setSavedPosts(nextSaved);
-      localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
-      return;
-    }
-
-    const nextSaved = currentSaved.filter((item) => item.id !== postId);
-    setSavedPosts(nextSaved);
-    localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
   };
 
   const toggleSave = (post) => {
@@ -565,12 +565,7 @@ const ImageSlider = () => {
                   </button>
                 </div>
 
-                {i === index && (
-                  <div className="viewer-play-badge">
-                    <Play size={12} fill="currentColor" />
-                    NOW PLAYING
-                  </div>
-                )}
+                
               </div>
             </div>
           );
