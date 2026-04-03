@@ -15,6 +15,7 @@ def get_tiktok_contents():
                 SELECT CONTENT_ID, ORIGINAL_LINK 
                 FROM TREND_CONTENT 
                 WHERE PLATFORM_TYPE = 'TIKTOK'
+                ORDER BY UPDATED_AT ASC
             """)
             return cursor.fetchall()
     except Exception as e:
