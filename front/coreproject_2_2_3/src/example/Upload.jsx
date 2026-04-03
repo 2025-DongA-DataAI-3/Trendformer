@@ -228,50 +228,312 @@ const baseField = {
   width: "100%",
   boxSizing: "border-box",
   borderRadius: "16px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#f2fbfb",
+  border: "1px solid rgba(17, 38, 52, 0.10)",
+  background: "rgba(255, 255, 255, 0.96)",
+  color: "#12202b",
   padding: "14px 16px",
   outline: "none",
   fontSize: "14px",
+  boxShadow: "inset 0 1px 2px rgba(31, 52, 67, 0.04)",
 };
 
 const styles = {
-  page: { padding: "0 16px 28px", color: "#f2fbfb", boxSizing: "border-box" },
-  heroCard: { padding: "20px", borderRadius: "26px", marginBottom: "18px", background: "linear-gradient(180deg, rgba(13, 22, 34, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 16px 36px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)" },
-  heroBadge: { display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", borderRadius: "999px", color: "#dffffd", background: "linear-gradient(135deg, rgba(31,138,138,0.24) 0%, rgba(63,208,201,0.12) 100%)", border: "1px solid rgba(126,243,234,0.16)", fontSize: "11px", fontWeight: 800, marginBottom: "14px" },
-  heroTitle: { margin: 0, fontSize: "24px", lineHeight: 1.22, letterSpacing: "-0.04em", color: "#f4fbfb" },
-  heroDesc: { margin: "10px 0 0", color: "#b7c9cf", fontSize: "14px", lineHeight: 1.7 },
-  formCard: { padding: "18px", borderRadius: "26px", marginBottom: "18px", background: "linear-gradient(180deg, rgba(13, 22, 34, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 16px 36px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)" },
-  sectionHead: { marginBottom: "14px" },
-  eyebrow: { display: "inline-block", marginBottom: "4px", color: "#bafffb", fontSize: "10px", fontWeight: 800, letterSpacing: "1.4px" },
-  sectionTitle: { margin: 0, color: "#f4fbfb", fontSize: "20px", fontWeight: 800, letterSpacing: "-0.03em" },
-  formGroup: { marginBottom: "16px" },
-  label: { display: "block", marginBottom: "8px", color: "#e8f3f4", fontSize: "14px", fontWeight: 700 },
-  fileBox: { width: "100%", borderRadius: "18px", border: "1px dashed rgba(126,243,234,0.2)", background: "rgba(255,255,255,0.03)", padding: "18px", display: "flex", alignItems: "center", gap: "14px", cursor: "pointer", boxSizing: "border-box" },
-  fileBoxIcon: { width: "52px", height: "52px", borderRadius: "16px", background: "rgba(63,208,201,0.12)", color: "#dffffd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  fileBoxText: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "5px", color: "#f4fbfb" },
-  fileInfoCard: { marginTop: "10px", padding: "14px", borderRadius: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" },
-  fileInfoLeft: { display: "flex", alignItems: "center", gap: "10px" },
-  fileInfoName: { color: "#f4fbfb", fontSize: "14px" },
-  fileInfoMeta: { margin: "4px 0 0", color: "#9db2b9", fontSize: "12px" },
+  page: {
+    padding: "0 16px 28px",
+    color: "#12202b",
+    boxSizing: "border-box",
+  },
+
+  heroCard: {
+    padding: "20px",
+    borderRadius: "26px",
+    marginBottom: "18px",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,250,252,0.98) 100%)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    boxShadow:
+      "0 16px 36px rgba(31, 52, 67, 0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+  },
+
+  heroBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    height: "32px",
+    padding: "0 12px",
+    borderRadius: "999px",
+    color: "#1f8a8a",
+    background: "rgba(63, 208, 201, 0.12)",
+    border: "1px solid rgba(63, 208, 201, 0.18)",
+    fontSize: "11px",
+    fontWeight: 800,
+    marginBottom: "14px",
+  },
+
+  heroTitle: {
+    margin: 0,
+    fontSize: "24px",
+    lineHeight: 1.22,
+    letterSpacing: "-0.04em",
+    color: "#12202b",
+  },
+
+  heroDesc: {
+    margin: "10px 0 0",
+    color: "#68808e",
+    fontSize: "14px",
+    lineHeight: 1.7,
+  },
+
+  formCard: {
+    padding: "18px",
+    borderRadius: "26px",
+    marginBottom: "18px",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,250,252,0.98) 100%)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    boxShadow:
+      "0 16px 36px rgba(31, 52, 67, 0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+  },
+
+  sectionHead: {
+    marginBottom: "14px",
+  },
+
+  eyebrow: {
+    display: "inline-block",
+    marginBottom: "4px",
+    color: "#1c9da0",
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "1.4px",
+  },
+
+  sectionTitle: {
+    margin: 0,
+    color: "#12202b",
+    fontSize: "20px",
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+  },
+
+  formGroup: {
+    marginBottom: "16px",
+  },
+
+  label: {
+    display: "block",
+    marginBottom: "8px",
+    color: "#243b4a",
+    fontSize: "14px",
+    fontWeight: 700,
+  },
+
+  fileBox: {
+    width: "100%",
+    borderRadius: "18px",
+    border: "1px dashed rgba(63, 208, 201, 0.26)",
+    background: "rgba(255, 255, 255, 0.92)",
+    padding: "18px",
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    cursor: "pointer",
+    boxSizing: "border-box",
+    boxShadow: "0 8px 18px rgba(31, 52, 67, 0.05)",
+  },
+
+  fileBoxIcon: {
+    width: "52px",
+    height: "52px",
+    borderRadius: "16px",
+    background: "rgba(63, 208, 201, 0.12)",
+    color: "#1f8a8a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  fileBoxText: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "5px",
+    color: "#12202b",
+  },
+
+  fileInfoCard: {
+    marginTop: "10px",
+    padding: "14px",
+    borderRadius: "16px",
+    background: "rgba(255, 255, 255, 0.96)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    boxShadow: "0 8px 18px rgba(31, 52, 67, 0.05)",
+  },
+
+  fileInfoLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  fileInfoName: {
+    color: "#12202b",
+    fontSize: "14px",
+  },
+
+  fileInfoMeta: {
+    margin: "4px 0 0",
+    color: "#6b818e",
+    fontSize: "12px",
+  },
+
   input: baseField,
-  select: { ...baseField, appearance: "none", WebkitAppearance: "none", MozAppearance: "none", colorScheme: "dark" },
-  textarea: { ...baseField, minHeight: "120px", resize: "vertical" },
-  helperText: { margin: "8px 0 0", color: "#8ea5ad", fontSize: "12px", lineHeight: 1.5 },
-  errorText: { margin: "8px 0 0", color: "#ff8fa4", fontSize: "12px", fontWeight: 700 },
-  previewGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "16px" },
-  previewItem: { padding: "14px", borderRadius: "18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" },
-  previewLabel: { display: "inline-flex", alignItems: "center", gap: "6px", color: "#9db2b9", fontSize: "12px", fontWeight: 700, marginBottom: "8px" },
-  previewValue: { color: "#f4fbfb", fontSize: "14px", lineHeight: 1.5 },
-  submitButton: { width: "100%", height: "50px", border: "none", borderRadius: "16px", padding: "0 16px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer", fontSize: "15px", fontWeight: 800, color: "#ffffff", background: "linear-gradient(135deg, #16767b 0%, #239da0 48%, #6be4da 100%)", boxShadow: "0 10px 20px rgba(35,157,160,0.22)" },
-  resultCard: { padding: "18px", borderRadius: "26px", background: "linear-gradient(180deg, rgba(13, 22, 34, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 16px 36px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)" },
-  resultBadge: { display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", borderRadius: "999px", color: "#dffffd", background: "rgba(63,208,201,0.1)", border: "1px solid rgba(63,208,201,0.16)", fontSize: "11px", fontWeight: 800, marginBottom: "14px" },
-  resultTitle: { margin: 0, color: "#f4fbfb", fontSize: "20px", fontWeight: 800, letterSpacing: "-0.03em" },
-  resultList: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "16px" },
-  resultRow: { padding: "13px 14px", borderRadius: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" },
-  resultKey: { color: "#9db2b9", fontSize: "13px", fontWeight: 700, flexShrink: 0 },
-  resultValue: { color: "#f4fbfb", fontSize: "13px", textAlign: "right", lineHeight: 1.5 },
+
+  select: {
+    ...baseField,
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    color: "#12202b",
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+  },
+
+  textarea: {
+    ...baseField,
+    minHeight: "120px",
+    resize: "vertical",
+  },
+
+  helperText: {
+    margin: "8px 0 0",
+    color: "#7a909c",
+    fontSize: "12px",
+    lineHeight: 1.5,
+  },
+
+  errorText: {
+    margin: "8px 0 0",
+    color: "#e25b77",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+
+  previewGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "10px",
+    marginBottom: "16px",
+  },
+
+  previewItem: {
+    padding: "14px",
+    borderRadius: "18px",
+    background: "rgba(255, 255, 255, 0.96)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    boxShadow: "0 8px 18px rgba(31, 52, 67, 0.05)",
+  },
+
+  previewLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    color: "#6b818e",
+    fontSize: "12px",
+    fontWeight: 700,
+    marginBottom: "8px",
+  },
+
+  previewValue: {
+    color: "#12202b",
+    fontSize: "14px",
+    lineHeight: 1.5,
+  },
+
+  submitButton: {
+    width: "100%",
+    height: "50px",
+    border: "none",
+    borderRadius: "16px",
+    padding: "0 16px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    cursor: "pointer",
+    fontSize: "15px",
+    fontWeight: 800,
+    color: "#ffffff",
+    background: "linear-gradient(135deg, #16767b 0%, #239da0 48%, #6be4da 100%)",
+    boxShadow: "0 10px 20px rgba(35,157,160,0.22)",
+  },
+
+  resultCard: {
+    padding: "18px",
+    borderRadius: "26px",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,250,252,0.98) 100%)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    boxShadow:
+      "0 16px 36px rgba(31, 52, 67, 0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+  },
+
+  resultBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    height: "32px",
+    padding: "0 12px",
+    borderRadius: "999px",
+    color: "#1f8a8a",
+    background: "rgba(63, 208, 201, 0.12)",
+    border: "1px solid rgba(63, 208, 201, 0.18)",
+    fontSize: "11px",
+    fontWeight: 800,
+    marginBottom: "14px",
+  },
+
+  resultTitle: {
+    margin: 0,
+    color: "#12202b",
+    fontSize: "20px",
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+  },
+
+  resultList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginTop: "16px",
+  },
+
+  resultRow: {
+    padding: "13px 14px",
+    borderRadius: "16px",
+    background: "rgba(255, 255, 255, 0.96)",
+    border: "1px solid rgba(17, 38, 52, 0.08)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    boxShadow: "0 8px 18px rgba(31, 52, 67, 0.05)",
+  },
+
+  resultKey: {
+    color: "#6b818e",
+    fontSize: "13px",
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+
+  resultValue: {
+    color: "#12202b",
+    fontSize: "13px",
+    textAlign: "right",
+    lineHeight: 1.5,
+  },
 };
 
 export default Upload;

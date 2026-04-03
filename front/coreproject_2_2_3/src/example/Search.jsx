@@ -16,6 +16,8 @@ const STORAGE_KEY = "searchHistory";
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
 
+const LIMIT = 10;
+
 const defaultAiKeywords = [
   "유행어 밈",
   "챌린지 숏폼",
@@ -37,6 +39,9 @@ const Search = () => {
   const [contents, setContents] = useState([]);
   const [filteredContents, setFilteredContents] = useState([]);
   const searchAreaRef = useRef(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -48,30 +53,66 @@ const Search = () => {
     setSavedPosts(storedSavedPosts);
   }, []);
 
-  const shuffleArray = (array) => {
-    const copied = [...array];
+  const loadContents = async ({
+    keyword = "",
+    isFirst = false,
+  }) => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
 
-    for (let i = copied.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copied[i], copied[j]] = [copied[j], copied[i]];
+    if (!storedUser?.id) {
+      console.error("로그인한 사용자 정보가 없습니다.");
+      return;
     }
 
-    return copied;
+    setLoading(true);
+
+    try {
+      const url = new URL(`http://localhost:3002/search-content/${storedUser.id}`);
+      url.searchParams.set("limit", LIMIT);
+
+      if (keyword.trim()) {
+        url.searchParams.set("keyword", keyword.trim());
+      }
+
+      // 첫 로딩이 아니면 이미 불러온 영상 id 제외
+      const currentList = isFirst ? [] : filteredContents;
+      const excludeIds = currentList
+        .map((item) => item.CONTENT_ID)
+        .filter(Boolean);
+
+      if (excludeIds.length > 0) {
+        url.searchParams.set("excludeIds", excludeIds.join(","));
+      }
+
+      const res = await fetch(url.toString());
+
+      if (!res.ok) {
+        throw new Error(`HTTP 오류: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const safeData = Array.isArray(data) ? data : [];
+
+      if (isFirst) {
+        setContents(safeData);
+        setFilteredContents(safeData);
+      } else {
+        setContents((prev) => [...prev, ...safeData]);
+        setFilteredContents((prev) => [...prev, ...safeData]);
+      }
+
+      setHasMore(safeData.length === LIMIT);
+    } catch (err) {
+      console.error("콘텐츠 불러오기 실패:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetch("http://localhost:3002/content")
-      .then((res) => res.json())
-      .then((data) => {
-        const safeData = Array.isArray(data) ? data : [];
-        const shuffled = shuffleArray(safeData);
-        setContents(shuffled);
-        setFilteredContents(shuffled);
-      })
-      .catch((err) => {
-        console.error("콘텐츠 불러오기 실패:", err);
-      });
+    loadContents({ nextOffset: 0, keyword: "", isFirst: true });
   }, []);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -131,33 +172,20 @@ const Search = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const handleSearch = (keyword = query) => {
+  const handleSearch = async (keyword = query) => {
     const trimmed = keyword.trim();
 
+    setShowSuggestPanel(false);
+    setQuery(trimmed);
+    setHasMore(true);
+
     if (!trimmed) {
-      setFilteredContents(shuffleArray(contents));
-      setQuery("");
-      setShowSuggestPanel(false);
+      await loadContents({ keyword: "", isFirst: true });
       return;
     }
 
     saveHistory(trimmed);
-    setQuery(trimmed);
-    setShowSuggestPanel(false);
-
-    const result = contents.filter((item) => {
-      const text = `
-        ${item.TITLE || ""}
-        ${item.KEYWORDS || ""}
-        ${item.PLATFORM_TYPE || ""}
-        ${item.USER_ID || ""}
-        ${item.CONTENT_ID || ""}
-      `.toLowerCase();
-
-      return text.includes(trimmed.toLowerCase());
-    });
-
-    setFilteredContents(shuffleArray(result));
+    await loadContents({ keyword: trimmed, isFirst: true });
   };
 
   const handleSubmit = (e) => {
@@ -176,10 +204,17 @@ const Search = () => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const handleResetSearch = () => {
+  const handleResetSearch = async () => {
     setQuery("");
-    setFilteredContents(shuffleArray(contents));
     setShowSuggestPanel(false);
+    setHasMore(true);
+
+    await loadContents({ keyword: "", isFirst: true });
+  };
+
+  const handleLoadMore = async () => {
+    if (loading || !hasMore) return;
+    await loadContents({ keyword: query, isFirst: false });
   };
 
   const openVideoModal = (item) => {
@@ -509,6 +544,19 @@ const Search = () => {
           </div>
         )}
       </div>
+
+      {hasMore && (
+        <div className="tf-load-more-wrap">
+          <button
+            type="button"
+            className="tf-load-more-btn"
+            onClick={handleLoadMore}
+            disabled={loading}
+          >
+            {loading ? "불러오는 중..." : "더보기"}
+          </button>
+        </div>
+      )}
 
       {selectedVideo && (
         <div className="tf-video-modal-overlay" onClick={closeVideoModal}>
