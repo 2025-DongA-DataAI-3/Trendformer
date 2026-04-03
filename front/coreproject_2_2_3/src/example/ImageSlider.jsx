@@ -20,6 +20,7 @@ const ImageSlider = () => {
   const touchStartY = useRef(0);
   const videoRefs = useRef({});
   const wheelLock = useRef(false);
+  const tikTokRefs = useRef({});
   const [isPlaying, setIsPlaying] = useState({});
   const [expandedPost, setExpandedPost] = useState(null);
   const [progressMap, setProgressMap] = useState({});
@@ -108,9 +109,36 @@ const ImageSlider = () => {
       return cleanUrl;
     }
 
-    return cleanUrl.endsWith("/")
-      ? `${cleanUrl}embed`
-      : `${cleanUrl}/embed`;
+    const noQuery = cleanUrl.split("?")[0];
+    const normalized = noQuery.endsWith("/") ? noQuery : `${noQuery}/`;
+
+    return `${normalized}embed`;
+  };
+
+  const getTikTokPlayerUrl = (url) => {
+    if (!url) return "";
+
+    const cleanUrl = url.trim();
+
+    const match = cleanUrl.match(/\/video\/(\d+)/);
+    if (!match) return "";
+
+    const videoId = match[1];
+
+    return `https://www.tiktok.com/player/v1/${videoId}?controls=1&description=0&music_info=0&autoplay=0&loop=1`;
+  };
+
+  const postTikTokCommand = (iframeEl, type, value) => {
+    if (!iframeEl?.contentWindow) return;
+
+    iframeEl.contentWindow.postMessage(
+      {
+        "x-tiktok-player": true,
+        type,
+        value,
+      },
+      "*"
+    );
   };
 
   const getLikeInfo = (postId, baseLikes = 0) => {
@@ -220,7 +248,23 @@ const ImageSlider = () => {
     }
   };
 
-  const togglePlayPause = (contentId) => {
+  const togglePlayPause = (contentId, platform) => {
+    if (platform === "tiktok") {
+      const iframe = tikTokRefs.current[contentId];
+      if (!iframe) return;
+
+      const currentlyPlaying = !!isPlaying[contentId];
+
+      if (currentlyPlaying) {
+        postTikTokCommand(iframe, "pause");
+        setIsPlaying((prev) => ({ ...prev, [contentId]: false }));
+      } else {
+        postTikTokCommand(iframe, "play");
+        setIsPlaying((prev) => ({ ...prev, [contentId]: true }));
+      }
+      return;
+    }
+
     const video = videoRefs.current[contentId];
     if (!video) return;
 
@@ -250,7 +294,24 @@ const ImageSlider = () => {
       }
     });
 
-    if (isTikTok || isInstagram) {
+    Object.entries(tikTokRefs.current).forEach(([id, iframe]) => {
+      if (!iframe) return;
+
+      if (Number(id) !== Number(active.CONTENT_ID)) {
+        postTikTokCommand(iframe, "pause");
+      }
+    });
+
+    if (isTikTok) {
+      const activeTikTok = tikTokRefs.current[active.CONTENT_ID];
+      if (activeTikTok) {
+        postTikTokCommand(activeTikTok, "play");
+        setIsPlaying({ [active.CONTENT_ID]: true });
+      }
+      return;
+    }
+
+    if (isInstagram) {
       return;
     }
 
@@ -320,18 +381,29 @@ const ImageSlider = () => {
           const instagramEmbedUrl = getInstagramEmbedUrl(
             item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
           );
+          const tikTokPlayerUrl = getTikTokPlayerUrl(
+            item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
+          );
 
           return (
             <div className="slide" key={item.CONTENT_ID || i}>
               <div className="video-frame">
                 {shouldRenderVideo ? (
                   isTikTok ? (
-                    item.FILE_PATH ? (
+                    tikTokPlayerUrl ? (
                       <div className="embed-crop tiktok-crop">
                         <iframe
-                          src={item.FILE_PATH}   // 🔥 DB에 있는 embed URL 그대로
+                          ref={(el) => {
+                            if (el) {
+                              tikTokRefs.current[item.CONTENT_ID] = el;
+                            } else {
+                              delete tikTokRefs.current[item.CONTENT_ID];
+                            }
+                          }}
+                          src={tikTokPlayerUrl}
                           title={item.TITLE || "tiktok embed"}
                           className="embed-frame tiktok-frame"
+                          allow="autoplay; encrypted-media"
                           allowFullScreen
                         />
                       </div>
@@ -345,6 +417,7 @@ const ImageSlider = () => {
                           src={instagramEmbedUrl}
                           title={item.TITLE || "instagram embed"}
                           className="embed-frame instagram-frame"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                           allowFullScreen
                         />
                       </div>
@@ -368,7 +441,9 @@ const ImageSlider = () => {
                       playsInline
                       controls={false}
                       preload={i === index ? "auto" : "none"}
-                      onClick={() => togglePlayPause(item.CONTENT_ID)}
+                      onClick={() =>
+                        togglePlayPause(item.CONTENT_ID, item.PLATFORM_TYPE?.toLowerCase())
+                      }
                       onLoadedData={() => {
                         if (i === index) {
                           const video = videoRefs.current[item.CONTENT_ID];
@@ -502,7 +577,7 @@ const ImageSlider = () => {
         })}
       </div>
 
-    
+
     </div>
   );
 };
