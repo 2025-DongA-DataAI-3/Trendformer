@@ -4,6 +4,7 @@ import pymysql
 import re
 import requests
 from datetime import datetime
+from urllib.parse import quote
 from playwright.async_api import async_playwright
 from config import DB_CONFIG
 
@@ -48,7 +49,7 @@ def get_oembed_data(url):
         print(f"❌ oEmbed 실패 ({url}): {e}")
     return None
 
-def save_to_db(content_item, like_count, view_count):
+def save_to_db(content_item, like_count, view_count, keyword):
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
@@ -64,10 +65,17 @@ def save_to_db(content_item, like_count, view_count):
 
             if row:
                 content_id = row[0]
+
                 cursor.execute("""
                     INSERT INTO TREND_METRIC (CONTENT_ID, VIEW_COUNT, LIKE_COUNT, RECORDED_AT)
                     VALUES (%s, %s, %s, NOW())
                 """, (content_id, view_count, like_count))
+
+                cursor.execute("""
+                    INSERT IGNORE INTO CONTENT_KEYWORD (CONTENT_ID, KEYWORD)
+                    VALUES (%s, %s)
+                """, (content_id, keyword))
+                print(f"🔑 키워드 저장: {keyword}")
 
         conn.commit()
         print(f"✅ 저장 완료 - 좋아요: {like_count}, 조회수: {view_count}")
@@ -82,7 +90,6 @@ async def get_post_details(page, url):
         await page.goto(url, wait_until="networkidle", timeout=30000)
         await asyncio.sleep(random.uniform(3, 5))
 
-        # 좋아요 추출
         like_count = 0
         try:
             el = await page.query_selector('[data-e2e="like-count"]')
@@ -91,7 +98,6 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # 조회수 추출
         view_count = 0
         try:
             el = await page.query_selector('[data-e2e="undefined-count"]')
@@ -100,7 +106,6 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # 업로드 날짜 추출
         uploaded_at = None
         try:
             content = await page.content()
@@ -112,7 +117,6 @@ async def get_post_details(page, url):
         except:
             pass
 
-        # oEmbed로 제목, 썸네일, 작성자 추출
         oembed = get_oembed_data(url)
         title = "제목 없음"
         thumbnail = ""
@@ -123,7 +127,6 @@ async def get_post_details(page, url):
             creator_name = oembed.get('author_name', '')
             print(f"👤 작성자: {creator_name}")
 
-        # embed URL
         video_id = url.split('/video/')[-1].split('?')[0]
         embed_url = f"https://www.tiktok.com/embed/v2/{video_id}"
 
@@ -183,14 +186,21 @@ async def main():
         for tag in target_tags:
             print(f"\n🔎 #{tag} 탐색 시작")
             try:
+                # 해시태그로 먼저 시도
                 await page.goto(f"https://www.tiktok.com/tag/{tag}", wait_until="networkidle")
                 await asyncio.sleep(5)
 
-                # 5초 대기 후 게시물 존재 여부 확인
                 links_check = await page.query_selector_all('a[href*="/video/"]')
                 if not links_check:
-                    print(f"⚠️ #{tag} 게시물 없음, 스킵")
-                    continue
+                    # 해시태그 실패 시 검색으로 재시도
+                    print(f"⚠️ #{tag} 해시태그 없음, 검색으로 재시도")
+                    await page.goto(f"https://www.tiktok.com/search?q={quote(tag)}", wait_until="networkidle")
+                    await asyncio.sleep(5)
+
+                    links_check = await page.query_selector_all('a[href*="/video/"]')
+                    if not links_check:
+                        print(f"⚠️ #{tag} 검색에서도 게시물 없음, 스킵")
+                        continue
 
                 collected_urls = []
                 prev_count = 0
@@ -225,7 +235,7 @@ async def main():
                 for url in collected_urls:
                     result = await get_post_details(page, url)
                     if result:
-                        save_to_db(result["content"], result["like_count"], result["view_count"])
+                        save_to_db(result["content"], result["like_count"], result["view_count"], tag)
                     await asyncio.sleep(random.uniform(2, 4))
 
             except Exception as e:
