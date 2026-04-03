@@ -11,6 +11,22 @@ import {
 } from "lucide-react";
 import "./Search.css";
 
+// 배열 랜덤 섞기 함수
+const shuffleArray = (array) => {
+  const newArray = [...array]
+
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+
+    const temp = newArray[i]
+    newArray[i] = newArray[j]
+    newArray[j] = temp
+  }
+
+  return newArray
+}
+
+
 const STORAGE_KEY = "searchHistory";
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
