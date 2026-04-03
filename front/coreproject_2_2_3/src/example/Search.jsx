@@ -169,7 +169,7 @@ const Search = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-<<<<<<< HEAD
+
   const saveSearchLogToServer = async (keyword) => {
     const trimmed = keyword.trim();
     if (!trimmed) return false;
@@ -210,8 +210,7 @@ const Search = () => {
     }
   };
 
-=======
->>>>>>> ee699e796b95f23788dcac15231a5215d0c693bb
+
   const handleSearch = async (keyword = query) => {
     const trimmed = keyword.trim();
 
@@ -225,7 +224,7 @@ const Search = () => {
     }
 
     saveHistory(trimmed);
-<<<<<<< HEAD
+
     await saveSearchLogToServer(trimmed);
     setQuery(trimmed);
     setShowSuggestPanel(false);
@@ -243,9 +242,9 @@ const Search = () => {
     });
 
     setFilteredContents(shuffleArray(result));
-=======
+
     await loadContents({ keyword: trimmed, isFirst: true });
->>>>>>> ee699e796b95f23788dcac15231a5215d0c693bb
+
   };
 
   const handleSubmit = async (e) => {
