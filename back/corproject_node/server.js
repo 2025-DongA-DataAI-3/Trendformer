@@ -3,7 +3,6 @@ const express = require('express')
 const app = express()
 const mysql = require("mysql2")
 const { spawn } = require('child_process')
-const path = require('path')
 
 const cors = require('cors')
 app.use(cors())
