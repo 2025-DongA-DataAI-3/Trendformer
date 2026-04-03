@@ -54,8 +54,8 @@ def run_crawler():
     count = get_tiktok_count()
     print(f"📦 현재 틱톡 게시물 수: {count}개")
 
-    if count >= 3000:
-        print("✅ 3000개 이상 - 크롤링 스킵")
+    if count >= 6000:
+        print("✅ 6000개 이상 - 크롤링 스킵")
         return
 
     deleted = delete_old_contents()
