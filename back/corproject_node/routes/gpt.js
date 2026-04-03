@@ -78,19 +78,19 @@ const runAiClassificationOnce = async () => {
 
             await new Promise((resolve, reject) => {
                 conn.query(
-                    "INSERT INTO CONTENT_CATEGORY (CONTENT_ID, CATEGORY_ID) VALUES (?, ?)",
-                    [item.CONTENT_ID, categoryId],
-                    (insertErr) => {
-                        if (insertErr) {
-                            console.error(`DB 저장 실패 (ID ${item.CONTENT_ID}):`, insertErr.message);
-                            reject(insertErr);
-                        } else {
-                            console.log(`✨ [성공] ID: ${item.CONTENT_ID} | 분류: ${categoryId} | 제목: ${item.TITLE?.substring(0, 20)}...`);
-                            resolve();
-                        }
-                    }
-                );
-            });
+        "INSERT IGNORE INTO CONTENT_CATEGORY (CONTENT_ID, CATEGORY_ID) VALUES (?, ?)",
+        [item.CONTENT_ID, categoryId],
+        (insertErr) => {
+            if (insertErr) {
+                console.error(`DB 저장 실패 (ID ${item.CONTENT_ID}):`, insertErr.message);
+                reject(insertErr);
+            } else {
+                console.log(`✨ [성공] ID: ${item.CONTENT_ID} | 분류: ${categoryId} | 제목: ${item.TITLE?.substring(0, 20)}...`);
+                resolve();
+            }
+        }
+    );
+});
 
         } catch (error) {
             console.error(`처리 중 오류 (ID ${item.CONTENT_ID}):`, error.message);
