@@ -25,11 +25,19 @@ def parse_og_description(desc):
     title = "제목 없음"
     uploaded_at = None
     like_count = 0
+    creator_name = None
 
     if not desc:
-        return title, uploaded_at, like_count
+        return title, uploaded_at, like_count, creator_name
 
     try:
+        # 작성자 추출
+        creator_match = re.search(r'-\s*(\S+)\s*-\s*\w+ \d+,', desc)
+        if creator_match:
+            creator_name = creator_match.group(1)
+            print(f"👤 작성자: {creator_name}")
+
+        # 좋아요 추출
         like_match = re.search(r'([\d.]+[KM]?)\s*likes', desc, re.IGNORECASE)
         if like_match:
             like_text = like_match.group(1)
@@ -40,11 +48,13 @@ def parse_og_description(desc):
             else:
                 like_count = int(like_text)
 
+        # 날짜 추출
         date_match = re.search(r'(\w+ \d+, \d{4})', desc)
         if date_match:
             date_str = date_match.group(1)
             uploaded_at = datetime.strptime(date_str, "%B %d, %Y").strftime("%Y-%m-%d %H:%M:%S")
 
+        # 캡션 추출
         caption_match = re.search(r'\d{4}:\s*"(.+?)(?:"|$)', desc, re.DOTALL)
         if caption_match:
             title = caption_match.group(1).split('\n')[0][:200]
@@ -52,7 +62,7 @@ def parse_og_description(desc):
     except Exception as e:
         print(f"파싱 오류: {e}")
 
-    return title, uploaded_at, like_count
+    return title, uploaded_at, like_count, creator_name
 
 def save_to_db(content_item, like_count):
     try:
@@ -60,8 +70,8 @@ def save_to_db(content_item, like_count):
         with conn.cursor() as cursor:
             content_sql = """
                 INSERT IGNORE INTO TREND_CONTENT
-                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, DESCRIPTION, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
-                VALUES (UUID(), 'INSTAGRAM', %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
+                (CONTENT_ID, PLATFORM_TYPE, ORIGINAL_LINK, TITLE, CREATOR_NAME, DESCRIPTION, FILE_PATH, SOURCE_TYPE, UPLOADED_AT, CREATED_AT, UPDATED_AT)
+                VALUES (UUID(), 'INSTAGRAM', %s, %s, %s, %s, %s, 'CRAWLING', %s, NOW(), NOW())
             """
             cursor.execute(content_sql, content_item)
 
@@ -97,24 +107,26 @@ async def get_post_details(page, url):
         uploaded_at = None
         like_count = 0
         description = ""
+        creator_name = None
 
         try:
             meta_desc = await page.query_selector('meta[property="og:description"]')
             if meta_desc:
                 desc = await meta_desc.get_attribute('content')
                 print(f"📝 og:description: {desc[:100]}")
-                title, uploaded_at, like_count = parse_og_description(desc)
+                title, uploaded_at, like_count, creator_name = parse_og_description(desc)
                 description = desc[:500]
                 print(f"📅 업로드 날짜: {uploaded_at}")
                 print(f"👍 좋아요: {like_count}")
                 print(f"📌 제목: {title}")
+                print(f"👤 작성자: {creator_name}")
         except Exception as e:
             print(f"⚠️ meta 추출 실패: {e}")
 
         embed_url = url.rstrip('/') + '/embed'
 
         return {
-            "content": (url, title, description, embed_url, uploaded_at),
+            "content": (url, title, creator_name, description, embed_url, uploaded_at),
             "like_count": like_count
         }
 
