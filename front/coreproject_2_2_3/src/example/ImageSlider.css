@@ -13,6 +13,7 @@
   height: calc(100vh - 200px); /* 🔥 핵심 */
   overflow: hidden;
   position: relative;
+  bottom: -12px;
   border-radius: 14px;
   background: #000;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -26,18 +27,19 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at top left, rgba(63, 208, 201, 0.12), transparent 30%),
-    linear-gradient(180deg, #0a111b 0%, #081019 100%);
-    margin: 0;
+    radial-gradient(circle at top left, rgba(63, 208, 201, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbfeff 0%, #f3f8fb 100%);
+  margin: 0;
 }
 
 .viewer-empty-card {
   width: calc(100% - 32px);
   padding: 22px;
   border-radius: 24px;
-  background: rgba(10, 18, 28, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #f4fbfb;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(17, 38, 52, 0.08);
+  color: #12202b;
+  box-shadow: 0 12px 28px rgba(31, 52, 67, 0.08);
 }
 
 .viewer-empty-card h4 {
@@ -59,9 +61,9 @@
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(63, 208, 201, 0.1);
-  border: 1px solid rgba(63, 208, 201, 0.16);
-  color: #dffffd;
+  background: rgba(63, 208, 201, 0.12);
+  border: 1px solid rgba(63, 208, 201, 0.18);
+  color: #1f8a8a;
   font-size: 11px;
   font-weight: 800;
 }
