@@ -70,7 +70,7 @@ def save_to_db(content_item, like_count, view_count, keyword):
                 cid = row[0]
                 cursor.execute("INSERT INTO TREND_METRIC (CONTENT_ID, VIEW_COUNT, LIKE_COUNT, RECORDED_AT) VALUES (%s, %s, %s, NOW())", (cid, view_count, like_count))
                 cursor.execute("INSERT IGNORE INTO CONTENT_KEYWORD (CONTENT_ID, KEYWORD) VALUES (%s, %s)", (cid, keyword))
-                 print(f"     👍 좋아요: {like_count} | 👁️ 조회수: {view_count} | 🔑 키워드: {keyword}")
+                print(f"     👍 좋아요: {like_count} | 👁️ 조회수: {view_count} | 🔑 키워드: {keyword}")
         conn.commit()
     except Exception as e: print(f"❌ DB 저장 실패: {e}")
     finally:
