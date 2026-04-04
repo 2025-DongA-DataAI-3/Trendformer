@@ -182,7 +182,7 @@ def save_metrics(rows):
         metric_rows.append({
             "CONTENT_ID": row.get("CONTENT_ID"),
             "VIEW_COUNT": row.get("VIEW_COUNT", 0),
-            "LIKE_COUNT": row.get("LIKE_COUNT", 0)
+            "LIKE_COUNT": row.get("LIKE_COUNT", 0),
         })
 
     sql = """
@@ -273,22 +273,5 @@ def save_one_to_db(row):
         print("[DB 1건 저장 실패]")
         print("에러:", e)
         return False
-    finally:
-        conn.close()
-
-
-# CONTENT_KEYWORD에 T_KEYWORD 하나 추가
-def save_content_keyword(content_id, keyword):
-    sql = """
-        INSERT IGNORE INTO CONTENT_KEYWORD (CONTENT_ID, KEYWORD)
-        VALUES (%s, %s)
-    """
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (content_id, keyword))
-        conn.commit()
-    except Exception as e:
-        print(f"[CONTENT_KEYWORD 저장 실패] {e}")
     finally:
         conn.close()

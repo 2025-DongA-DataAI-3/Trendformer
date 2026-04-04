@@ -186,14 +186,24 @@ async def main():
         for tag in target_tags:
             print(f"\n🔎 #{tag} 탐색 시작")
             try:
+<<<<<<< HEAD
                 # 해시태그로 먼저 시도
+=======
+                # 1. 해시태그로 먼저 시도
+>>>>>>> a0a954a6156a7ca63c19d757c4a7e3c89ba6f42e
                 await page.goto(f"https://www.tiktok.com/tag/{tag}", wait_until="networkidle")
                 await asyncio.sleep(5)
 
                 links_check = await page.query_selector_all('a[href*="/video/"]')
+
+                # 2. 해시태그 게시물 없으면 검색으로 재시도
                 if not links_check:
+<<<<<<< HEAD
                     # 해시태그 실패 시 검색으로 재시도
                     print(f"⚠️ #{tag} 해시태그 없음, 검색으로 재시도")
+=======
+                    print(f"⚠️ #{tag} 해시태그 게시물 없음, 검색으로 재시도")
+>>>>>>> a0a954a6156a7ca63c19d757c4a7e3c89ba6f42e
                     await page.goto(f"https://www.tiktok.com/search?q={quote(tag)}", wait_until="networkidle")
                     await asyncio.sleep(5)
 
@@ -201,12 +211,17 @@ async def main():
                     if not links_check:
                         print(f"⚠️ #{tag} 검색에서도 게시물 없음, 스킵")
                         continue
+<<<<<<< HEAD
+=======
+                    else:
+                        print(f"✅ #{tag} 검색 결과로 진행")
+>>>>>>> a0a954a6156a7ca63c19d757c4a7e3c89ba6f42e
 
                 collected_urls = []
                 prev_count = 0
                 scroll_attempts = 0
 
-                while len(collected_urls) < per_tag_count and scroll_attempts < 20:
+                while len(collected_urls) < per_tag_count:
                     links = await page.query_selector_all('a[href*="/video/"]')
                     for link in links:
                         href = await link.get_attribute('href')
@@ -222,6 +237,9 @@ async def main():
                         await page.evaluate("window.scrollBy(0, 1000)")
                         await asyncio.sleep(2)
                         scroll_attempts += 1
+                        if scroll_attempts >= 5:
+                            print(f"⚠️ #{tag} 더 이상 새 URL 없음, {len(collected_urls)}개로 진행")
+                            break
                     else:
                         scroll_attempts = 0
                     prev_count = len(collected_urls)
