@@ -287,7 +287,6 @@ const ImageSlider = () => {
 
     Object.entries(videoRefs.current).forEach(([id, video]) => {
       if (!video) return;
-
       if (Number(id) !== Number(active.CONTENT_ID)) {
         video.pause();
         video.currentTime = 0;
@@ -296,15 +295,17 @@ const ImageSlider = () => {
 
     Object.entries(tikTokRefs.current).forEach(([id, iframe]) => {
       if (!iframe) return;
-
       if (Number(id) !== Number(active.CONTENT_ID)) {
+        // pause + 처음으로 되감기
         postTikTokCommand(iframe, "pause");
+        postTikTokCommand(iframe, "seek", 0);
       }
     });
 
     if (isTikTok) {
       const activeTikTok = tikTokRefs.current[active.CONTENT_ID];
       if (activeTikTok) {
+        postTikTokCommand(activeTikTok, "seek", 0);
         postTikTokCommand(activeTikTok, "play");
         setIsPlaying({ [active.CONTENT_ID]: true });
       }
@@ -374,7 +375,7 @@ const ImageSlider = () => {
         {contents.map((item, i) => {
           const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
           const saved = isSaved(item.CONTENT_ID);
-          const shouldRenderVideo = Math.abs(i - index) <= 1;
+          const shouldRenderVideo = Math.abs(i - index) <= 5;
           const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok";
           const isInstagram = item.PLATFORM_TYPE?.toLowerCase() === "instagram";
           const videoUrl = getVideoUrl(item.FILE_PATH);
@@ -387,30 +388,30 @@ const ImageSlider = () => {
 
           return (
             <div className="slide" key={item.CONTENT_ID || i}>
-              <div className="video-frame">
-                {shouldRenderVideo ? (
-                  isTikTok ? (
-                    tikTokPlayerUrl ? (
-                      <div className="embed-crop tiktok-crop">
-                        <iframe
-                          ref={(el) => {
-                            if (el) {
-                              tikTokRefs.current[item.CONTENT_ID] = el;
-                            } else {
-                              delete tikTokRefs.current[item.CONTENT_ID];
-                            }
-                          }}
-                          src={tikTokPlayerUrl}
-                          title={item.TITLE || "tiktok embed"}
-                          className="embed-frame tiktok-frame"
-                          allow="autoplay; encrypted-media"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : (
-                      <div className="content-video">틱톡 주소 없음</div>
-                    )
-                  ) : isInstagram ? (
+  <div className="video-frame">
+    {isTikTok ? (
+      tikTokPlayerUrl ? (
+        <div 
+          className="embed-crop tiktok-crop"
+          style={{ visibility: shouldRenderVideo ? 'visible' : 'hidden' }}
+        >
+          <iframe
+            ref={(el) => {
+              if (el) tikTokRefs.current[item.CONTENT_ID] = el;
+              else delete tikTokRefs.current[item.CONTENT_ID];
+            }}
+            src={tikTokPlayerUrl}
+            title={item.TITLE || "tiktok embed"}
+            className="embed-frame tiktok-frame"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div className="content-video">틱톡 주소 없음</div>
+      )
+    ) : shouldRenderVideo ? (
+      isInstagram ? (
                     instagramEmbedUrl ? (
                       <div className="embed-crop instagram-crop">
                         <iframe
