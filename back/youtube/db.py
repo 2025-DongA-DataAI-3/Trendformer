@@ -183,21 +183,18 @@ def save_metrics(rows):
             "CONTENT_ID": row.get("CONTENT_ID"),
             "VIEW_COUNT": row.get("VIEW_COUNT", 0),
             "LIKE_COUNT": row.get("LIKE_COUNT", 0),
-            "LIFECYCLE_STAGE": row.get("LIFECYCLE_STAGE", "도입")
         })
 
     sql = """
     INSERT INTO TREND_METRIC (
         CONTENT_ID,
         VIEW_COUNT,
-        LIKE_COUNT,
-        LIFECYCLE_STAGE
+        LIKE_COUNT
     )
     VALUES (
         %(CONTENT_ID)s,
         %(VIEW_COUNT)s,
-        %(LIKE_COUNT)s,
-        %(LIFECYCLE_STAGE)s
+        %(LIKE_COUNT)s
     )
     """
 

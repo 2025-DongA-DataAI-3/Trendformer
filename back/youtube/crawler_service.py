@@ -351,23 +351,6 @@ def run_save_urls_and_extract_mp4():
             ascending=False
         ).reset_index(drop=True)
 
-    # -----------------------------
-    # KEYWORDS 자동 생성 (추가)
-    # -----------------------------
-    df = add_keywords_column(df)
-
-    # -----------------------------
-    # 생애주기 계산 (추가)
-    # -----------------------------
-    lifecycle_df = calculate_keyword_lifecycle(df)
-
-    if not lifecycle_df.empty:
-        print("\n키워드별 생애주기 계산 결과")
-        print(lifecycle_df)
-
-        df = apply_lifecycle_to_content(df, lifecycle_df)
-    else:
-        df["LIFECYCLE_STAGE"] = "도입"
 
     save_count = 0
     metric_count = 0
@@ -388,16 +371,16 @@ def run_save_urls_and_extract_mp4():
             save_metrics([row])
             metric_count += 1
 
-            # 바로 mp4 추출
-            mp4_url = extract_mp4_for_one_row(
-                row.get("CONTENT_ID"),
-                row.get("ORIGINAL_LINK")
-            )
+            # # 바로 mp4 추출 재추출 로직
+            # mp4_url = extract_mp4_for_one_row(
+            #     row.get("CONTENT_ID"),
+            #     row.get("ORIGINAL_LINK")
+            # )
 
-            if mp4_url:
-                mp4_count += 1
-            else:
-                print("MP4 추출 실패 -> 다음 영상 진행")
+            # if mp4_url:
+            #     mp4_count += 1
+            # else:
+            #     print("MP4 추출 실패 -> 다음 영상 진행")
 
         except Exception as e:
             print("개별 처리 중 오류:", e)
