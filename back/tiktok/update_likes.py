@@ -104,9 +104,6 @@ async def get_stats(page, url):
         return None, None
 
 async def main():
-    contents = get_tiktok_contents()
-    print(f"📦 총 {len(contents)}개 틱톡 게시물 업데이트 시작")
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,
@@ -115,14 +112,19 @@ async def main():
         context = await browser.new_context()
         page = await context.new_page()
 
-        for content_id, original_link in contents:
-            like_count, view_count = await get_stats(page, original_link)
-            if like_count is not None:
-                save_metric(content_id, like_count, view_count)
-            await asyncio.sleep(random.uniform(3, 6))
+        while True:  # 무한 반복
+            contents = get_tiktok_contents()  # 매 사이클마다 새로 조회
+            print(f"📦 총 {len(contents)}개 틱톡 게시물 업데이트 시작")
+
+            for content_id, original_link in contents:
+                like_count, view_count = await get_stats(page, original_link)
+                if like_count is not None:
+                    save_metric(content_id, like_count, view_count)
+                await asyncio.sleep(random.uniform(3, 6))
+
+            print("🎉 전체 업데이트 완료! 잠시 후 재시작")
+            await asyncio.sleep(60)  # 1분 대기 후 재시작
 
         await browser.close()
-        print("🎉 전체 업데이트 완료!")
-
 if __name__ == "__main__":
     asyncio.run(main())
