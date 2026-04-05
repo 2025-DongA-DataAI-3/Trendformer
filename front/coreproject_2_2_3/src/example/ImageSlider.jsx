@@ -307,7 +307,7 @@ const ImageSlider = () => {
             item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
           );
           const tikTokPlayerUrl = getTikTokPlayerUrl(
-            item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
+            item.ORIGINAL_LINK || item.ORIGINAL_URL || ""
           );
 
           return (
