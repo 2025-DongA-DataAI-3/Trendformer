@@ -5,6 +5,8 @@ const path = require('path')
 const { runAiScheduler } = require('./routes/gpt')
 const searchRouter = require("./routes/search")
 const session = require("express-session")
+const interactionRouter = require("./routes/interaction");
+
 
 const cors = require('cors')
 app.use(cors({
@@ -14,6 +16,7 @@ app.use(cors({
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use("/interaction", interactionRouter);
 
 app.use(session({
   secret: "trendformer",

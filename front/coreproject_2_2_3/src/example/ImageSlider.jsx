@@ -27,6 +27,11 @@ const ImageSlider = () => {
   const [expandedPost, setExpandedPost] = useState(null);
   const [progressMap, setProgressMap] = useState({});
 
+  const getLoginUserId = () => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    return storedUser?.USER_ID || storedUser?.id || null;
+  };
+
   const handleTimeUpdate = (contentId) => {
     const video = videoRefs.current[contentId];
     if (!video || !video.duration) return;
@@ -59,21 +64,21 @@ const ImageSlider = () => {
 
   // 콘텐츠 fetch (userId 기반)
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (!storedUser?.id) {
+    const userId = getLoginUserId();
+    if (!userId) {
       console.error("로그인한 사용자 정보가 없습니다.");
       return;
     }
-    fetch(`http://localhost:3002/content/${storedUser.id}`)
+
+    fetch(`http://localhost:3002/content/${userId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
         return res.json();
       })
       .then((data) => {
         const safeData = Array.isArray(data) ? data : [];
-  // FILE_PATH 있는 것만 필터링
         setContents(safeData);
-})
+      })
       .catch((err) => {
         console.error("콘텐츠 불러오기 실패:", err);
       });
@@ -107,7 +112,7 @@ const ImageSlider = () => {
     return `${normalized}embed`;
   };
 
-  // 틱톡 Player API URL 생성 (내꺼)
+  // 틱톡 Player API URL 생성
   const getTikTokPlayerUrl = (url) => {
     if (!url) return "";
     const cleanUrl = url.trim();
@@ -117,7 +122,7 @@ const ImageSlider = () => {
     return `https://www.tiktok.com/player/v1/${videoId}?controls=1&description=0&music_info=0&autoplay=0&loop=1`;
   };
 
-  // 틱톡 postMessage 제어 (내꺼)
+  // 틱톡 postMessage 제어
   const postTikTokCommand = (iframeEl, type, value) => {
     if (!iframeEl?.contentWindow) return;
     iframeEl.contentWindow.postMessage(
@@ -128,7 +133,7 @@ const ImageSlider = () => {
 
   const getLikeInfo = (postId, baseLikes = 0) => {
     const saved = likeState[postId];
-    if (!saved) return { count: baseLikes, liked: false };
+    if (!saved) return { count: Number(baseLikes) || 0, liked: false };
     return saved;
   };
 
@@ -150,32 +155,91 @@ const ImageSlider = () => {
     isVideo: true,
   });
 
-  const toggleLike = (post) => {
+  const toggleLike = async (post) => {
+    const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
+
+    if (!userId || !postId) {
+      console.error("좋아요 처리 실패: userId 또는 contentId 없음");
+      return;
+    }
+
     const current = getLikeInfo(postId, Number(post.LIKES) || 0);
-    const willLike = !current.liked;
-    const next = {
-      liked: willLike,
-      count: willLike ? current.count + 1 : Math.max(current.count - 1, 0),
-    };
-    const updatedLikes = { ...likeState, [postId]: next };
-    setLikeState(updatedLikes);
-    localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
+
+    try {
+      const res = await fetch("http://localhost:3002/interaction/like", {
+        method: current.liked ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          content_id: postId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "좋아요 처리 실패");
+      }
+
+      const next = {
+        liked: !current.liked,
+        count: current.liked
+          ? Math.max(current.count - 1, 0)
+          : current.count + 1,
+      };
+
+      const updatedLikes = { ...likeState, [postId]: next };
+      setLikeState(updatedLikes);
+      localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
+    } catch (error) {
+      console.error("좋아요 처리 실패:", error);
+    }
   };
 
-  const toggleSave = (post) => {
+  const toggleSave = async (post) => {
+    const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
-    const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
-    const exists = currentSaved.some((item) => item.id === postId);
-    let nextSaved;
-    if (exists) {
-      nextSaved = currentSaved.filter((item) => item.id !== postId);
-    } else {
-      const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
-      nextSaved = [createSavedPost(post, likeInfo.count), ...currentSaved];
+
+    if (!userId || !postId) {
+      console.error("북마크 처리 실패: userId 또는 contentId 없음");
+      return;
     }
-    setSavedPosts(nextSaved);
-    localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+
+    const saved = isSaved(postId);
+
+    try {
+      const res = await fetch("http://localhost:3002/interaction/bookmark", {
+        method: saved ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          content_id: postId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "북마크 처리 실패");
+      }
+
+      const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
+      const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
+
+      const nextSaved = saved
+        ? currentSaved.filter((item) => item.id !== postId)
+        : [createSavedPost(post, likeInfo.count), ...currentSaved.filter((item) => item.id !== postId)];
+
+      setSavedPosts(nextSaved);
+      localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+    } catch (error) {
+      console.error("보관 처리 실패:", error);
+    }
   };
 
   const handleTouchStart = (e) => {
@@ -190,7 +254,7 @@ const ImageSlider = () => {
     else goPrev();
   };
 
-  // 틱톡 play/pause 제어 (내꺼)
+  // 틱톡 play/pause 제어
   const togglePlayPause = (contentId, platform) => {
     if (platform === "tiktok") {
       const iframe = tikTokRefs.current[contentId];
@@ -216,7 +280,7 @@ const ImageSlider = () => {
     }
   };
 
-  // 슬라이드 전환 시 재생 제어 (내꺼 - seek 포함)
+  // 슬라이드 전환 시 재생 제어
   useEffect(() => {
     const active = contents[index];
     if (!active) return;
@@ -261,6 +325,61 @@ const ImageSlider = () => {
       .then(() => setIsPlaying({ [active.CONTENT_ID]: true }))
       .catch((err) => console.log("자동재생 실패:", err));
   }, [index, contents]);
+
+  useEffect(() => {
+    const fetchInteractionStates = async () => {
+      const userId = getLoginUserId();
+      if (!userId || contents.length === 0) return;
+
+      try {
+        const likeMap = {};
+        const savedList = [];
+
+        for (const item of contents) {
+          const contentId = item.CONTENT_ID;
+          if (!contentId) continue;
+
+          const [likeRes, bookmarkRes] = await Promise.all([
+            fetch(
+              `http://localhost:3002/interaction/like-status?user_id=${encodeURIComponent(
+                userId
+              )}&content_id=${encodeURIComponent(contentId)}`
+            ),
+            fetch(
+              `http://localhost:3002/interaction/bookmark-status?user_id=${encodeURIComponent(
+                userId
+              )}&content_id=${encodeURIComponent(contentId)}`
+            ),
+          ]);
+
+          const likeData = await likeRes.json();
+          const bookmarkData = await bookmarkRes.json();
+
+          likeMap[contentId] = {
+            liked: likeData.success ? likeData.liked : false,
+            count: Number(item.LIKES) || 0,
+          };
+
+          if (bookmarkData.success && bookmarkData.bookmarked) {
+            savedList.push(createSavedPost(item, Number(item.LIKES) || 0));
+          }
+        }
+
+        setLikeState((prev) => {
+          const merged = { ...prev, ...likeMap };
+          localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+
+        setSavedPosts(savedList);
+        localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(savedList));
+      } catch (error) {
+        console.error("좋아요/북마크 상태 조회 실패:", error);
+      }
+    };
+
+    fetchInteractionStates();
+  }, [contents]);
 
   const activeItem = useMemo(() => contents[index] || null, [contents, index]);
 
