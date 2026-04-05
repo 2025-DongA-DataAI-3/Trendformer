@@ -315,7 +315,7 @@ useEffect(() => {
     .then((data) => {
       const safeData = Array.isArray(data) ? data : [];
       const titles = [...new Set(safeData.map((item) => item.TITLE).filter(Boolean))];
-      setAutoCompleteSuggestions(titles.slice(0, 8));
+      setAutoCompleteSuggestions(titles.slice(0, 5));
     })
     .catch(() => setAutoCompleteSuggestions([]));
 }, [query]);
@@ -362,76 +362,70 @@ useEffect(() => {
         </form>
 
         {showSuggestPanel && (
-          <div className="tf-suggest-panel">
-            <div className="tf-suggest-grid">
-              <section className="tf-suggest-section history-block">
-                <div className="tf-suggest-head">
-                  <div className="tf-suggest-title-wrap">
-                    <History size={16} />
-                    <h3>최근 검색어</h3>
-                  </div>
-                  {history.length > 0 && (
-                    <button type="button" className="tf-suggest-clear-all" onClick={handleClearHistory}>전체 삭제</button>
-                  )}
-                </div>
-                {suggestionHistory.length > 0 ? (
-                  <div className="tf-history-list">
-                    {suggestionHistory.map((item) => (
-                      <div className="tf-history-item" key={item}>
-                        <button type="button" className="tf-history-keyword" onClick={() => handleSearch(item)}>{item}</button>
-                        <button type="button" className="tf-history-delete" onClick={() => handleDeleteHistoryItem(item)}><X size={14} /></button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="tf-empty-text">아직 검색 기록이 없어요. 첫 검색을 시작해보세요.</p>
-                )}
-              </section>
+  <div className="tf-suggest-panel">
+    
+    {/* 자동완성 - 타이핑 중일 때 맨 위에 리스트로 */}
+    {query.trim() && autoCompleteSuggestions.length > 0 && (
+      <div className="tf-autocomplete-list">
+        {autoCompleteSuggestions.map((item, index) => (
+          <button
+            type="button"
+            className="tf-autocomplete-item"
+            key={`${item}-${index}`}
+            onClick={() => handleAutoCompleteClick(item)}
+          >
+            <SearchIcon size={14} className="tf-autocomplete-icon" />
+            <span>{item}</span>
+          </button>
+        ))}
+      </div>
+    )}
 
-              <section className="tf-suggest-section ai-block">
-                <div className="tf-suggest-head">
-                  <div className="tf-suggest-title-wrap">
-                    <WandSparkles size={16} />
-                    <h3>AI 추천 검색어</h3>
-                  </div>
-                </div>
-                <div className="tf-ai-list">
-                  {suggestionAi.map((item) => (
-                    <button type="button" className="tf-ai-item" key={item.id} onClick={() => handleSearch(item.label)}>
-                      <span className="tf-ai-keyword">{item.label}</span>
-                      <span className="tf-ai-reason">{item.reason}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section className="tf-suggest-section auto-block">
-                <div className="tf-suggest-head">
-                  <div className="tf-suggest-title-wrap">
-                    <SearchIcon size={16} />
-                    <h3>자동완성</h3>
-                  </div>
-                </div>
-                {query.trim() ? (
-                  autoCompleteSuggestions.length > 0 ? (
-                    <div className="tf-ai-list">
-                      {autoCompleteSuggestions.map((item, index) => (
-                        <button type="button" className="tf-ai-item" key={`${item}-${index}`} onClick={() => handleAutoCompleteClick(item)}>
-                          <span className="tf-ai-keyword">{item}</span>
-                          <span className="tf-ai-reason">자동완성</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="tf-empty-text">자동완성 결과가 없습니다.</p>
-                  )
-                ) : (
-                  <p className="tf-empty-text">검색어를 입력하면 자동완성 목록이 표시됩니다.</p>
-                )}
-              </section>
-            </div>
+    {/* 최근검색어 + AI추천 */}
+    <div className="tf-suggest-grid">
+      <section className="tf-suggest-section history-block">
+        <div className="tf-suggest-head">
+          <div className="tf-suggest-title-wrap">
+            <History size={16} />
+            <h3>최근 검색어</h3>
           </div>
+          {history.length > 0 && (
+            <button type="button" className="tf-suggest-clear-all" onClick={handleClearHistory}>전체 삭제</button>
+          )}
+        </div>
+        {suggestionHistory.length > 0 ? (
+          <div className="tf-history-list">
+            {suggestionHistory.map((item) => (
+              <div className="tf-history-item" key={item}>
+                <button type="button" className="tf-history-keyword" onClick={() => handleSearch(item)}>{item}</button>
+                <button type="button" className="tf-history-delete" onClick={() => handleDeleteHistoryItem(item)}><X size={14} /></button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="tf-empty-text">아직 검색 기록이 없어요.</p>
         )}
+      </section>
+
+      <section className="tf-suggest-section ai-block">
+        <div className="tf-suggest-head">
+          <div className="tf-suggest-title-wrap">
+            <WandSparkles size={16} />
+            <h3>AI 추천 검색어</h3>
+          </div>
+        </div>
+        <div className="tf-ai-list">
+          {suggestionAi.map((item) => (
+            <button type="button" className="tf-ai-item" key={item.id} onClick={() => handleSearch(item.label)}>
+              <span className="tf-ai-keyword">{item.label}</span>
+              <span className="tf-ai-reason">{item.reason}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+)}
       </section>
 
       <section className="tf-search-feed-head">

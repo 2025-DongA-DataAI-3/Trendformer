@@ -157,6 +157,40 @@
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* 자동완성 리스트 */
+.tf-autocomplete-list {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(17, 38, 52, 0.06);
+  margin-bottom: 12px;
+}
+
+.tf-autocomplete-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: #12202b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+}
+
+.tf-autocomplete-item:hover {
+  background: rgba(63, 208, 201, 0.06);
+}
+
+.tf-autocomplete-icon {
+  color: #7a909c;
+  flex-shrink: 0;
+}
+
 .tf-suggest-grid {
   display: grid;
   grid-template-columns: 6fr 4fr;
@@ -168,11 +202,6 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(17, 38, 52, 0.06);
-  min-height: 180px;
-}
-
-/* 자동완성 섹션 (팀원1에서 추가) */
-.auto-block {
   min-height: 180px;
 }
 
@@ -536,7 +565,7 @@
 }
 
 .tf-video-modal-floating {
-   display: flex;
+  display: flex;
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -696,9 +725,5 @@
     right: 10px;
     bottom: 10px;
     flex-direction: column;
-  }
-
-  .auto-block {
-    min-height: 180px;
   }
 }
