@@ -70,14 +70,9 @@ const ImageSlider = () => {
         return res.json();
       })
       .then((data) => {
-  const safeData = Array.isArray(data) ? data : [];
+        const safeData = Array.isArray(data) ? data : [];
   // FILE_PATH 있는 것만 필터링
-  const filtered = safeData.filter((item) => {
-    const platform = item.PLATFORM_TYPE?.toLowerCase();
-    if (platform === "tiktok" || platform === "instagram") return true; // 틱톡/인스타는 FILE_PATH 불필요
-    return !!item.FILE_PATH; // 유튜브는 FILE_PATH 있어야만 표시
-  });
-  setContents(filtered);
+        setContents(safeData);
 })
       .catch((err) => {
         console.error("콘텐츠 불러오기 실패:", err);

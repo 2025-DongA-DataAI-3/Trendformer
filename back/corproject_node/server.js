@@ -131,17 +131,13 @@ app.put("/user/filter", (req, res) => {
 app.get("/content/:userId", (req, res) => {
   const { userId } = req.params
   const sql = `
-    SELECT tc.*, GROUP_CONCAT(ck.KEYWORD SEPARATOR ' ') AS KEYWORDS
-    FROM TREND_CONTENT tc
-    LEFT JOIN CONTENT_KEYWORD ck ON tc.CONTENT_ID = ck.CONTENT_ID
-    WHERE tc.CONTENT_ID NOT IN (
-      SELECT ck2.CONTENT_ID FROM CONTENT_KEYWORD ck2
-      JOIN C_FILTER_KEYWORD cfk ON TRIM(LOWER(ck2.KEYWORD)) = TRIM(LOWER(cfk.KEYWORD))
-      JOIN C_FILTER cf ON cfk.FILTER_ID = cf.FILTER_ID
-      WHERE cf.USER_ID = ?
+    SELECT *
+    FROM TREND_CONTENT
+    WHERE (
+      FILE_PATH IS NOT NULL AND FILE_PATH != ''
     )
-    GROUP BY tc.CONTENT_ID
-    ORDER BY tc.CREATED_AT DESC
+    OR PLATFORM_TYPE IN ('TIKTOK', 'INSTAGRAM')
+    ORDER BY CREATED_AT DESC
     LIMIT 100
   `
   conn.query(sql, [userId], (err, result) => {
