@@ -1,4 +1,3 @@
-/* Trend.css */
 * { box-sizing: border-box; }
 body { margin: 0; background: #f7fafc; }
 
@@ -14,12 +13,12 @@ body { margin: 0; background: #f7fafc; }
   min-height: 100vh;
   background: #fbfeff;
   position: relative;
-  overflow-y: auto; /* 프레임 자체에 스크롤 허용 */
+  overflow-y: auto;
   box-shadow: 0 0 40px rgba(0,0,0,0.05);
 }
 
 .trend-content {
-  padding: 15px 14px 40px; /* 상단 여백과 하단 탭바 여백 */
+  padding: 15px 14px 40px;
 }
 
 .trend-list-label { font-size: 11px; font-weight: 900; color: #1c9da0; margin: 0; }
@@ -38,26 +37,25 @@ body { margin: 0; background: #f7fafc; }
   border: 1px solid rgba(0,0,0,0.05);
   box-shadow: 0 6px 12px rgba(0,0,0,0.03);
   text-align: left;
+  cursor: pointer;
+  width: 100%;
 }
 
-.trend-category-name { font-size: 17px; font-weight: 900; margin: 0; color: #12202b; }
-.trend-category-desc { font-size: 12.5px; color: #64748b; margin-top: 6px; line-height: 1.4; }
+.trend-category-card.is-highlight {
+  border: 2px solid #1c9da0;
+}
 
-/* 🔥 버튼 컨테이너: 카드 바로 밑에 붙도록 relative 설정 */
+.trend-category-top { margin-bottom: 4px; }
+.trend-category-name { font-size: 15px; font-weight: 900; margin: 0; color: #12202b; }
+.trend-category-desc { font-size: 12px; color: #64748b; margin: 6px 0 0; line-height: 1.4; }
+
 .trend-rank-bar-container {
-  margin-top: 25px; /* 스포츠/이슈 카드와의 간격 */
+  margin-top: 25px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-}
-
-.trend-pull-hint {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #1c9da0;
-  margin: 0;
 }
 
 .trend-lifecycle-rank-bar {
@@ -71,20 +69,32 @@ body { margin: 0; background: #f7fafc; }
   padding: 0 20px;
   color: white;
   font-weight: 800;
+  border: none;
+  cursor: pointer;
   box-shadow: 0 8px 20px rgba(28, 157, 160, 0.25);
 }
 
 .trend-rank-bar-content { display: flex; align-items: center; gap: 8px; }
+.trend-rank-bar-arrow { font-size: 16px; }
 
-/* 모달 애니메이션 관련 */
+/* 백드롭 */
 .trend-rank-backdrop {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4); z-index: 999;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.trend-rank-backdrop.is-open {
+  opacity: 1;
+  pointer-events: all;
 }
 
+/* 슬라이드업 모달 */
 .trend-rank-modal-motion {
   position: fixed;
-  top: 70px; /* 카테고리 헤더 높이에 맞춰 조정 */
+  top: 70px;
   left: 0; right: 0; bottom: 0;
   width: 470px; margin: 0 auto;
   background: white;
@@ -92,8 +102,28 @@ body { margin: 0; background: #f7fafc; }
   border-radius: 28px 28px 0 0;
   display: flex; flex-direction: column;
   box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.trend-rank-modal-motion.is-open {
+  transform: translateY(0);
 }
 
-.trend-modal-handle { width: 100%; height: 35px; display: flex; justify-content: center; align-items: center; cursor: grab; }
-.handle-bar { width: 45px; height: 5px; background: #e2e8f0; border-radius: 10px; }
-.trend-modal-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 100px;}
+.trend-modal-handle {
+  width: 100%;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+}
+.handle-bar {
+  width: 45px; height: 5px;
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.trend-modal-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 100px;
+}

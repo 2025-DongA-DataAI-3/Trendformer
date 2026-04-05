@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Flame, TrendingUp } from "lucide-react";
-import RankList from "./RankList"; 
+import { TrendingUp } from "lucide-react";
+import RankList from "./RankList";
 import "./Trend.css";
 
 const categoryList = [
@@ -19,6 +18,33 @@ const categoryList = [
 const Trend = () => {
   const navigate = useNavigate();
   const [isRankOpen, setIsRankOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false); // 실제 DOM 마운트 여부
+  const touchStartY = useRef(null);
+
+  // 열기: DOM 먼저 마운트 → 다음 프레임에 애니메이션 클래스 추가
+  const openModal = () => {
+    setIsVisible(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setIsRankOpen(true));
+    });
+  };
+
+  // 닫기: 애니메이션 먼저 → 트랜지션 끝나면 DOM 언마운트
+  const closeModal = () => {
+    setIsRankOpen(false);
+    setTimeout(() => setIsVisible(false), 350); // transition 시간과 맞춤
+  };
+
+  // 터치로 아래로 100px 드래그하면 닫힘 (drag 대체)
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e) => {
+    if (touchStartY.current === null) return;
+    const diff = e.changedTouches[0].clientY - touchStartY.current;
+    if (diff > 100) closeModal();
+    touchStartY.current = null;
+  };
 
   const handleCategoryClick = (category) => {
     navigate(`/category/${category.id}`, {
@@ -36,12 +62,8 @@ const Trend = () => {
                 <p className="trend-list-label">CATEGORY LIST</p>
                 <h3 className="trend-list-title">밈 카테고리</h3>
               </div>
-              {/* <button type="button" className="trend-quick-btn">
-                <Flame size={14} /> 빠른 진입
-              </button> */}
             </div>
 
-            {/* 카테고리 그리드 */}
             <div className="trend-category-grid">
               {categoryList.map((category) => (
                 <button
@@ -58,13 +80,11 @@ const Trend = () => {
               ))}
             </div>
 
-            {/* 🔥 카드 바로 밑으로 버튼 이동 (공백 제거의 핵심) */}
             <div className="trend-rank-bar-container">
-              <p className="trend-pull-hint"></p>
               <button
                 type="button"
                 className="trend-lifecycle-rank-bar"
-                onClick={() => setIsRankOpen(true)}
+                onClick={openModal}
               >
                 <div className="trend-rank-bar-content">
                   <TrendingUp size={18} />
@@ -76,39 +96,27 @@ const Trend = () => {
           </section>
         </main>
 
-        {/* 랭킹 오버레이 (슈웅 애니메이션) */}
-        <AnimatePresence>
-          {isRankOpen && (
-            <>
-              <motion.div 
-                className="trend-rank-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsRankOpen(false)}
-              />
-              <motion.div
-                className="trend-rank-modal-motion"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                onDragEnd={(e, info) => {
-                  if (info.offset.y > 100) setIsRankOpen(false);
-                }}
-              >
-                <div className="trend-modal-handle" onClick={() => setIsRankOpen(false)}>
-                  <span className="handle-bar"></span>
-                </div>
-                <div className="trend-modal-scroll-area">
-                  <RankList isModal={true} />
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        {/* CSS 트랜지션 기반 모달 */}
+        {isVisible && (
+          <>
+            <div
+              className={`trend-rank-backdrop ${isRankOpen ? "is-open" : ""}`}
+              onClick={closeModal}
+            />
+            <div
+              className={`trend-rank-modal-motion ${isRankOpen ? "is-open" : ""}`}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="trend-modal-handle" onClick={closeModal}>
+                <span className="handle-bar"></span>
+              </div>
+              <div className="trend-modal-scroll-area">
+                <RankList isModal={true} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

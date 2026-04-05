@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "express-session": "^1.19.0"
+    "chart.js": "^4.5.1",
+    "express-session": "^1.19.0",
+    "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.4"
   }
 }
