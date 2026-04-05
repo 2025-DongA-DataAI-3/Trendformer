@@ -12,20 +12,29 @@ import Login from './example/Login.jsx'
 import Join from './example/Join.jsx'
 import TikTokTest from './example/TikTokTest.jsx'
 import CategoryVideos from './example/CategoryVideos.jsx'
+import Lifecycle from './example/Lifecycle.jsx' // ✅ 추가
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Routes>
       <Route element={<Layout></Layout>}>
+
         <Route path='/' element={<Home></Home>}></Route>
         <Route path='/trend' element={<Trend></Trend>}></Route>
         <Route path='/category/:categoryId' element={<CategoryVideos></CategoryVideos>}></Route>
+
         <Route path='/upload' element={<Upload></Upload>}></Route>
         <Route path='/search' element={<Search></Search>}></Route>
+
         <Route path='/login' element={<Login></Login>}></Route>
         <Route path='/join' element={<Join></Join>}></Route>
+
         <Route path='/profile' element={<Profile></Profile>}></Route>
         <Route path='/tiktok' element={<TikTokTest></TikTokTest>}></Route>
+
+        {/* 🔥 이거 추가해야 함 */}
+        <Route path='/lifecycle' element={<Lifecycle></Lifecycle>}></Route>
+
       </Route>
     </Routes>
   </BrowserRouter>

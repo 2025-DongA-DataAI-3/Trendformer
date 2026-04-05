@@ -4,22 +4,23 @@
   overflow: hidden;
   padding: 0 16px 28px;
   box-sizing: border-box;
-  padding-bottom: 0px;
+  padding-bottom: 0;
 }
 
 .viewer {
   width: 100%;
   height: 76vh;
-  height: calc(100vh - 200px); /* 🔥 핵심 */
+  height: calc(100vh - 200px);
   overflow: hidden;
   position: relative;
-  bottom: -12px;
-  border-radius: 14px;
-  background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(63, 208, 201, 0.08), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #f6fafc 100%);
+  border: 1px solid rgba(17, 38, 52, 0.08);
   box-shadow:
-    0 18px 38px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 18px 38px rgba(31, 52, 67, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .loading-viewer {
@@ -45,11 +46,12 @@
 .viewer-empty-card h4 {
   margin: 14px 0 8px;
   font-size: 20px;
+  color: #12202b;
 }
 
 .viewer-empty-card p {
   margin: 0;
-  color: #9db2b9;
+  color: #6b818e;
   font-size: 14px;
   line-height: 1.7;
 }
@@ -84,16 +86,17 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #eef4f7;
   overflow: hidden;
+  border-radius: 20px;
 }
 
 .content-video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
-  background: #000;
+  background: #eef4f7;
 }
 
 .embed-crop {
@@ -101,7 +104,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #000;
+  background: #eef4f7;
 }
 
 .embed-frame {
@@ -109,24 +112,22 @@
   height: 100%;
   border: none;
   display: block;
-  background: #000;
+  background: #eef4f7;
 }
 
 .instagram-crop {
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: #eef4f7;
 }
 
 .instagram-frame {
   position: absolute;
   top: 0;
   left: 50%;
-
-  width: calc(100% + 18px);   /* 스크롤바 폭 보정 */
+  width: calc(100% + 18px);
   height: 100%;
   border: none;
-
   transform: translateX(calc(-50% + 11px)) scale(1.4);
   transform-origin: center center;
 }
@@ -148,8 +149,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, transparent 24%),
-    linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.68) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 24%),
+    linear-gradient(180deg, transparent 50%, rgba(18, 32, 43, 0.38) 100%);
   pointer-events: none;
 }
 
@@ -164,32 +165,33 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #f4fbfb;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #12202b;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(17, 38, 52, 0.08);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   font-size: 12px;
   font-weight: 800;
+  box-shadow: 0 6px 14px rgba(31, 52, 67, 0.08);
 }
 
 .viewer-live-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #7ef3ea;
-  box-shadow: 0 0 12px rgba(126, 243, 234, 0.6);
+  background: #3fd0c9;
+  box-shadow: 0 0 12px rgba(63, 208, 201, 0.35);
 }
 
 .video-overlay {
   position: absolute;
   left: 18px;
   right: 90px;
-  bottom: 5px;
+  bottom: 8px;
   z-index: 5;
-  color: #fff;
+  color: #ffffff;
   box-sizing: border-box;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.56);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.36);
 }
 
 .video-meta-line {
@@ -212,20 +214,20 @@
 }
 
 .video-category {
-  background: rgba(63, 208, 201, 0.16);
-  color: #ddfffc;
-  border: 1px solid rgba(126, 243, 234, 0.16);
+  background: rgba(255, 255, 255, 0.8);
+  color: #1f8a8a;
+  border: 1px solid rgba(63, 208, 201, 0.18);
 }
 
 .video-user {
-  background: rgba(0, 0, 0, 0.26);
-  color: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .video-title {
   margin: 0;
-  color: #fff;
+  color: #ffffff;
   font-weight: 800;
   line-height: 1.35;
   cursor: pointer;
@@ -257,13 +259,13 @@
 .video-tags span {
   font-size: 12px;
   font-weight: 700;
-  color: #dffcf9;
+  color: #eefcfb;
 }
 
 .origin-link {
   display: inline-block;
   margin-top: 8px;
-  color: #7ef3ea;
+  color: #bafffb;
   font-size: 14px;
   font-weight: 700;
   position: relative;
@@ -284,9 +286,10 @@
   position: absolute;
   left: 16px;
   right: 16px;
+  top: 10px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(17, 38, 52, 0.12);
   overflow: hidden;
   z-index: 8;
 }
@@ -304,8 +307,8 @@
   padding: 8px 0;
   border: none;
   border-radius: 18px;
-  background: rgba(8, 12, 18, 0.48);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.84);
+  color: #12202b;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -314,8 +317,8 @@
   cursor: pointer;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(17, 38, 52, 0.08);
+  box-shadow: 0 8px 18px rgba(31, 52, 67, 0.12);
 }
 
 .action-btn span {
@@ -325,14 +328,14 @@
 
 .action-btn.liked {
   color: #ff7292;
-  border-color: rgba(255, 114, 146, 0.26);
-  background: rgba(255, 114, 146, 0.08);
+  border-color: rgba(255, 114, 146, 0.22);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .action-btn.saved {
-  color: #7ef3ea;
-  border-color: rgba(126, 243, 234, 0.26);
-  background: rgba(126, 243, 234, 0.08);
+  color: #1f8a8a;
+  border-color: rgba(63, 208, 201, 0.22);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .viewer-nav-hint {
@@ -351,15 +354,16 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 12, 18, 0.44);
-  color: #ffffff;
+  border: 1px solid rgba(17, 38, 52, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  color: #12202b;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 12px rgba(31, 52, 67, 0.08);
 }
 
 .hint-btn:disabled {
@@ -368,7 +372,7 @@
 }
 
 .hint-count {
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 11px;
   font-weight: 800;
   writing-mode: vertical-rl;
@@ -386,10 +390,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #08111b;
-  background: #dffffd;
+  color: #12202b;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(17, 38, 52, 0.08);
   font-size: 11px;
   font-weight: 900;
+  box-shadow: 0 6px 14px rgba(31, 52, 67, 0.08);
 }
 
 .viewer-bottom-summary {
@@ -401,8 +407,8 @@
   height: 44px;
   padding: 0 14px;
   border-radius: 16px;
-  background: rgba(8, 12, 18, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(17, 38, 52, 0.08);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -412,14 +418,14 @@
 }
 
 .viewer-bottom-summary strong {
-  color: #dffffd;
+  color: #1f8a8a;
   font-size: 12px;
   font-weight: 800;
   flex-shrink: 0;
 }
 
 .viewer-bottom-summary span {
-  color: #f4fbfb;
+  color: #12202b;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -431,23 +437,10 @@
     padding: 0 12px 24px;
   }
 
-  .home-hero-copy h2 {
-    font-size: 21px;
-  }
-
-  .home-hero-actions {
-    flex-direction: column;
-  }
-
-  .home-primary-btn,
-  .home-secondary-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
   .viewer {
     height: 72vh;
     min-height: 500px;
+    border-radius: 18px;
   }
 
   .video-title {
@@ -458,16 +451,16 @@
     bottom: 12px;
   }
 
-  .tiktok-wrap { /* 삭제 */
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
+  .tiktok-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
 
-.tiktok-wrap .tiktok-embed { /* 삭제 */
-  margin: 0 !important;
-}
+  .tiktok-wrap .tiktok-embed {
+    margin: 0 !important;
+  }
 }

@@ -110,10 +110,16 @@ const Layout = () => {
 
           <NavLink
             to="/search"
+            end
+            state={{ reset: true }}
             className={({ isActive }) =>
               isActive ? "tf-bottom-item active" : "tf-bottom-item"
             }
-          >
+            onClick={() => {
+              const content = document.querySelector(".tf-content");
+              if (content) content.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            >
             <SearchIcon size={20} />
             <span>검색</span>
           </NavLink>

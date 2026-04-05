@@ -34,7 +34,16 @@ const categoryMap = {
   },
 };
 
+const getYoutubeThumbnail = (url) => {
+  if (!url) return null;
+  const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
+  if (!match) return null;
+  return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+};
+
+
 const normalizeVideoData = (video) => {
+  const originalUrl = video.ORIGINAL_LINK || video.ORIGINAL_URL || "";
   return {
     id: video.CONTENT_ID || video.content_id || video.id,
     platform: video.PLATFORM || video.platform || "YOUTUBE",
@@ -46,21 +55,14 @@ const normalizeVideoData = (video) => {
       "@unknown",
     title: video.TITLE || video.title || "제목 없음",
     thumbnail:
-      video.THUMBNAIL_URL ||
+      video.THUMBNAIL_PATH ||
       video.thumbnail_url ||
       video.THUMBNAIL ||
       video.thumbnail ||
+      getYoutubeThumbnail(originalUrl) ||
       "https://via.placeholder.com/600x900?text=No+Image",
-    likes:
-      video.LIKE_COUNT ||
-      video.like_count ||
-      video.likes ||
-      0,
-    saved:
-      video.SAVED_COUNT ||
-      video.saved_count ||
-      video.saved ||
-      0,
+    likes: video.LIKE_COUNT || video.like_count || video.likes || 0,
+    saved: video.SAVED_COUNT || video.saved_count || video.saved || 0,
     url:
       video.CONTENT_URL ||
       video.content_url ||
@@ -127,16 +129,12 @@ const CategoryVideos = () => {
 
   return (
     <div className="cv-page">
-      <section className="cv-hero-card">
+      <div className="cv-back-wrap">
         <Link to="/trend" className="cv-back-btn">
           <ArrowLeft size={16} />
           <span>카테고리로 돌아가기</span>
         </Link>
-
-        <span className="cv-eyebrow">SELECTED CATEGORY</span>
-        <h2 className="cv-title">{currentCategory.title}</h2>
-        <p className="cv-description">{currentCategory.description}</p>
-      </section>
+      </div>
 
       <section className="cv-list-section">
         <div className="cv-list-header">

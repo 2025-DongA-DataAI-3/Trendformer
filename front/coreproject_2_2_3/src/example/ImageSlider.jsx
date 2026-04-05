@@ -8,7 +8,6 @@ import {
   Play,
 } from "lucide-react";
 import "./ImageSlider.css";
-
 import { useLocation } from "react-router-dom";
 
 const LIKE_STORAGE_KEY = "postLikes";
@@ -28,58 +27,46 @@ const ImageSlider = () => {
   const [expandedPost, setExpandedPost] = useState(null);
   const [progressMap, setProgressMap] = useState({});
 
-
-
   const handleTimeUpdate = (contentId) => {
     const video = videoRefs.current[contentId];
     if (!video || !video.duration) return;
-
     const progress = (video.currentTime / video.duration) * 100;
-
-    setProgressMap((prev) => ({
-      ...prev,
-      [contentId]: progress,
-    }));
+    setProgressMap((prev) => ({ ...prev, [contentId]: progress }));
   };
 
   const handleLoadedMetadata = (contentId) => {
-    setProgressMap((prev) => ({
-      ...prev,
-      [contentId]: 0,
-    }));
+    setProgressMap((prev) => ({ ...prev, [contentId]: 0 }));
   };
 
   const toggleExpanded = (postId) => {
     setExpandedPost((prev) => (prev === postId ? null : postId));
   };
 
+  // 로컬스토리지 초기화
   useEffect(() => {
     const storedLikes = JSON.parse(localStorage.getItem(LIKE_STORAGE_KEY)) || {};
     const storedSavedPosts = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
-
     setLikeState(storedLikes);
     setSavedPosts(storedSavedPosts);
   }, []);
 
+  // 페이지 이동 시 index 초기화
   useEffect(() => {
     if (location.state?.reset) {
       setIndex(0);
     }
   }, [location]);
 
+  // 콘텐츠 fetch (userId 기반)
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-
     if (!storedUser?.id) {
       console.error("로그인한 사용자 정보가 없습니다.");
       return;
     }
-
     fetch(`http://localhost:3002/content/${storedUser.id}`)
       .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP 오류: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
         return res.json();
       })
       .then((data) => {
@@ -91,124 +78,86 @@ const ImageSlider = () => {
       });
   }, []);
 
-  const goNext = () => {
-    setIndex((prev) => Math.min(prev + 1, contents.length - 1));
-  };
-
-  const goPrev = () => {
-    setIndex((prev) => Math.max(prev - 1, 0));
-  };
+  const goNext = () => setIndex((prev) => Math.min(prev + 1, contents.length - 1));
+  const goPrev = () => setIndex((prev) => Math.max(prev - 1, 0));
 
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "ArrowDown") goNext();
       if (e.key === "ArrowUp") goPrev();
     };
-
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [contents.length]);
 
   const getVideoUrl = (filePath) => {
     if (!filePath) return "";
-
-    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-      return filePath;
-    }
-
-    if (filePath.startsWith("/")) {
-      return `http://localhost:3002${filePath}`;
-    }
-
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) return filePath;
+    if (filePath.startsWith("/")) return `http://localhost:3002${filePath}`;
     return `http://localhost:3002/uploads/${filePath}`;
   };
 
   const getInstagramEmbedUrl = (url) => {
     if (!url) return "";
-
     const cleanUrl = url.trim();
-
-    if (cleanUrl.includes("/embed")) {
-      return cleanUrl;
-    }
-
+    if (cleanUrl.includes("/embed")) return cleanUrl;
     const noQuery = cleanUrl.split("?")[0];
     const normalized = noQuery.endsWith("/") ? noQuery : `${noQuery}/`;
-
     return `${normalized}embed`;
   };
 
+  // 틱톡 Player API URL 생성 (내꺼)
   const getTikTokPlayerUrl = (url) => {
     if (!url) return "";
-
     const cleanUrl = url.trim();
-
     const match = cleanUrl.match(/\/video\/(\d+)/);
     if (!match) return "";
-
     const videoId = match[1];
-
     return `https://www.tiktok.com/player/v1/${videoId}?controls=1&description=0&music_info=0&autoplay=0&loop=1`;
   };
 
+  // 틱톡 postMessage 제어 (내꺼)
   const postTikTokCommand = (iframeEl, type, value) => {
     if (!iframeEl?.contentWindow) return;
-
     iframeEl.contentWindow.postMessage(
-      {
-        "x-tiktok-player": true,
-        type,
-        value,
-      },
+      { "x-tiktok-player": true, type, value },
       "*"
     );
   };
 
   const getLikeInfo = (postId, baseLikes = 0) => {
     const saved = likeState[postId];
-    if (!saved) {
-      return { count: baseLikes, liked: false };
-    }
+    if (!saved) return { count: baseLikes, liked: false };
     return saved;
   };
 
-  const isSaved = (postId) => {
-    return savedPosts.some((item) => item.id === postId);
-  };
+  const isSaved = (postId) => savedPosts.some((item) => item.id === postId);
 
-  const createSavedPost = (post, nextCount) => {
-    return {
-      id: post.CONTENT_ID,
-      img: getVideoUrl(post.FILE_PATH),
-      category: post.PLATFORM_TYPE || "Meme",
-      title: post.TITLE || "제목 없음",
-      desc: `${post.USER_ID || "unknown"}님의 게시물`,
-      tags: post.PLATFORM_TYPE ? [`#${post.PLATFORM_TYPE}`] : ["#meme"],
-      saves: nextCount,
-      userId: post.USER_ID || "unknown",
-      nickname: post.USER_ID || "unknown",
-      date: post.CREATED_AT || "",
-      filePath: getVideoUrl(post.FILE_PATH),
-      originalUrl: post.ORIGINAL_URL || post.ORIGINAL_LINK || "",
-      isVideo: true,
-    };
-  };
+  const createSavedPost = (post, nextCount) => ({
+    id: post.CONTENT_ID,
+    img: getVideoUrl(post.FILE_PATH),
+    category: post.PLATFORM_TYPE || "Meme",
+    title: post.TITLE || "제목 없음",
+    desc: `${post.USER_ID || "unknown"}님의 게시물`,
+    tags: post.PLATFORM_TYPE ? [`#${post.PLATFORM_TYPE}`] : ["#meme"],
+    saves: nextCount,
+    userId: post.USER_ID || "unknown",
+    nickname: post.USER_ID || "unknown",
+    date: post.CREATED_AT || "",
+    filePath: getVideoUrl(post.FILE_PATH),
+    originalUrl: post.ORIGINAL_URL || post.ORIGINAL_LINK || "",
+    isVideo: true,
+  });
 
   const toggleLike = (post) => {
     const postId = post.CONTENT_ID;
     const current = getLikeInfo(postId, Number(post.LIKES) || 0);
     const willLike = !current.liked;
-
     const next = {
       liked: willLike,
       count: willLike ? current.count + 1 : Math.max(current.count - 1, 0),
     };
-
-    const updatedLikes = {
-      ...likeState,
-      [postId]: next,
-    };
-
+    const updatedLikes = { ...likeState, [postId]: next };
     setLikeState(updatedLikes);
     localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
   };
@@ -217,16 +166,13 @@ const ImageSlider = () => {
     const postId = post.CONTENT_ID;
     const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
     const exists = currentSaved.some((item) => item.id === postId);
-
     let nextSaved;
-
     if (exists) {
       nextSaved = currentSaved.filter((item) => item.id !== postId);
     } else {
       const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
       nextSaved = [createSavedPost(post, likeInfo.count), ...currentSaved];
     }
-
     setSavedPosts(nextSaved);
     localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
   };
@@ -238,23 +184,17 @@ const ImageSlider = () => {
   const handleTouchEnd = (e) => {
     const endY = e.changedTouches[0].clientY;
     const diff = touchStartY.current - endY;
-
     if (Math.abs(diff) < 40) return;
-
-    if (diff > 0) {
-      goNext();
-    } else {
-      goPrev();
-    }
+    if (diff > 0) goNext();
+    else goPrev();
   };
 
+  // 틱톡 play/pause 제어 (내꺼)
   const togglePlayPause = (contentId, platform) => {
     if (platform === "tiktok") {
       const iframe = tikTokRefs.current[contentId];
       if (!iframe) return;
-
       const currentlyPlaying = !!isPlaying[contentId];
-
       if (currentlyPlaying) {
         postTikTokCommand(iframe, "pause");
         setIsPlaying((prev) => ({ ...prev, [contentId]: false }));
@@ -264,10 +204,8 @@ const ImageSlider = () => {
       }
       return;
     }
-
     const video = videoRefs.current[contentId];
     if (!video) return;
-
     if (video.paused) {
       video.play();
       setIsPlaying((prev) => ({ ...prev, [contentId]: true }));
@@ -277,6 +215,7 @@ const ImageSlider = () => {
     }
   };
 
+  // 슬라이드 전환 시 재생 제어 (내꺼 - seek 포함)
   useEffect(() => {
     const active = contents[index];
     if (!active) return;
@@ -296,7 +235,6 @@ const ImageSlider = () => {
     Object.entries(tikTokRefs.current).forEach(([id, iframe]) => {
       if (!iframe) return;
       if (Number(id) !== Number(active.CONTENT_ID)) {
-        // pause + 처음으로 되감기
         postTikTokCommand(iframe, "pause");
         postTikTokCommand(iframe, "seek", 0);
       }
@@ -312,22 +250,15 @@ const ImageSlider = () => {
       return;
     }
 
-    if (isInstagram) {
-      return;
-    }
+    if (isInstagram) return;
 
     const activeVideo = videoRefs.current[active.CONTENT_ID];
     if (!activeVideo) return;
 
     activeVideo.muted = true;
-    activeVideo
-      .play()
-      .then(() => {
-        setIsPlaying({ [active.CONTENT_ID]: true });
-      })
-      .catch((err) => {
-        console.log("자동재생 실패:", err);
-      });
+    activeVideo.play()
+      .then(() => setIsPlaying({ [active.CONTENT_ID]: true }))
+      .catch((err) => console.log("자동재생 실패:", err));
   }, [index, contents]);
 
   const activeItem = useMemo(() => contents[index] || null, [contents, index]);
@@ -348,29 +279,21 @@ const ImageSlider = () => {
   }
 
   return (
-
     <div
       className="viewer"
       onWheel={(e) => {
         if (wheelLock.current) return;
-
         wheelLock.current = true;
-
         if (e.deltaY > 0) goNext();
         if (e.deltaY < 0) goPrev();
-
-        setTimeout(() => {
-          wheelLock.current = false;
-        }, 350);
+        setTimeout(() => { wheelLock.current = false; }, 350);
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <div
         className="slider"
-        style={{
-          transform: `translateY(-${index * 100}%)`,
-        }}
+        style={{ transform: `translateY(-${index * 100}%)` }}
       >
         {contents.map((item, i) => {
           const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
@@ -388,30 +311,30 @@ const ImageSlider = () => {
 
           return (
             <div className="slide" key={item.CONTENT_ID || i}>
-  <div className="video-frame">
-    {isTikTok ? (
-      tikTokPlayerUrl ? (
-        <div 
-          className="embed-crop tiktok-crop"
-          style={{ visibility: shouldRenderVideo ? 'visible' : 'hidden' }}
-        >
-          <iframe
-            ref={(el) => {
-              if (el) tikTokRefs.current[item.CONTENT_ID] = el;
-              else delete tikTokRefs.current[item.CONTENT_ID];
-            }}
-            src={tikTokPlayerUrl}
-            title={item.TITLE || "tiktok embed"}
-            className="embed-frame tiktok-frame"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <div className="content-video">틱톡 주소 없음</div>
-      )
-    ) : shouldRenderVideo ? (
-      isInstagram ? (
+              <div className="video-frame">
+                {isTikTok ? (
+                  tikTokPlayerUrl ? (
+                    <div
+                      className="embed-crop tiktok-crop"
+                      style={{ visibility: shouldRenderVideo ? "visible" : "hidden" }}
+                    >
+                      <iframe
+                        ref={(el) => {
+                          if (el) tikTokRefs.current[item.CONTENT_ID] = el;
+                          else delete tikTokRefs.current[item.CONTENT_ID];
+                        }}
+                        src={tikTokPlayerUrl}
+                        title={item.TITLE || "tiktok embed"}
+                        className="embed-frame tiktok-frame"
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div className="content-video">틱톡 주소 없음</div>
+                  )
+                ) : shouldRenderVideo ? (
+                  isInstagram ? (
                     instagramEmbedUrl ? (
                       <div className="embed-crop instagram-crop">
                         <iframe
@@ -428,11 +351,8 @@ const ImageSlider = () => {
                   ) : videoUrl ? (
                     <video
                       ref={(el) => {
-                        if (el) {
-                          videoRefs.current[item.CONTENT_ID] = el;
-                        } else {
-                          delete videoRefs.current[item.CONTENT_ID];
-                        }
+                        if (el) videoRefs.current[item.CONTENT_ID] = el;
+                        else delete videoRefs.current[item.CONTENT_ID];
                       }}
                       className="content-video"
                       src={videoUrl}
@@ -442,17 +362,13 @@ const ImageSlider = () => {
                       playsInline
                       controls={false}
                       preload={i === index ? "auto" : "none"}
-                      onClick={() =>
-                        togglePlayPause(item.CONTENT_ID, item.PLATFORM_TYPE?.toLowerCase())
-                      }
+                      onClick={() => togglePlayPause(item.CONTENT_ID, item.PLATFORM_TYPE?.toLowerCase())}
                       onLoadedData={() => {
                         if (i === index) {
                           const video = videoRefs.current[item.CONTENT_ID];
                           if (video) {
                             video.muted = true;
-                            video.play().catch((err) => {
-                              console.log("로드 후 재생 실패:", err);
-                            });
+                            video.play().catch((err) => console.log("로드 후 재생 실패:", err));
                           }
                         }
                       }}
@@ -482,23 +398,20 @@ const ImageSlider = () => {
 
                 <div className="video-overlay">
                   <div className="video-meta-line">
-                    <span className="video-category">
-                      {item.PLATFORM_TYPE || "Meme"}
-                    </span>
+                    <span className="video-category">{item.PLATFORM_TYPE || "Meme"}</span>
                     <span className="video-user">@{item.CREATOR_NAME || "unknown"}</span>
                   </div>
 
                   <h4
-                    className={`video-title ${expandedPost === item.CONTENT_ID ? "expanded" : "collapsed"
-                      }`}
+                    className={`video-title ${expandedPost === item.CONTENT_ID ? "expanded" : "collapsed"}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleExpanded(item.CONTENT_ID);
                     }}
                   >
-
                     {item.TITLE || "지금 뜨는 밈 콘텐츠"}
                   </h4>
+
                   {expandedPost === item.CONTENT_ID &&
                     (item.ORIGINAL_URL || item.ORIGINAL_LINK) && (
                       <a
@@ -511,12 +424,12 @@ const ImageSlider = () => {
                         원본 보러가기
                       </a>
                     )}
+
                   <div className="video-tags">
                     <span>#{item.PLATFORM_TYPE || "trend"}</span>
                     <span>#shorts</span>
                     <span>#meme</span>
                   </div>
-
                 </div>
 
                 <div className="video-actions">
@@ -525,10 +438,7 @@ const ImageSlider = () => {
                     className={`action-btn ${likeInfo.liked ? "liked" : ""}`}
                     onClick={() => toggleLike(item)}
                   >
-                    <Heart
-                      size={20}
-                      fill={likeInfo.liked ? "currentColor" : "none"}
-                    />
+                    <Heart size={20} fill={likeInfo.liked ? "currentColor" : "none"} />
                     <span>{likeInfo.count}</span>
                   </button>
 
@@ -543,37 +453,19 @@ const ImageSlider = () => {
                 </div>
 
                 <div className="viewer-nav-hint">
-                  <button
-                    type="button"
-                    className="hint-btn"
-                    onClick={goPrev}
-                    disabled={index === 0}
-                  >
+                  <button type="button" className="hint-btn" onClick={goPrev} disabled={index === 0}>
                     <ChevronUp size={16} />
                   </button>
-
-                  <span className="hint-count">
-                    {index + 1} / {contents.length}
-                  </span>
-
-                  <button
-                    type="button"
-                    className="hint-btn"
-                    onClick={goNext}
-                    disabled={index === contents.length - 1}
-                  >
+                  <span className="hint-count">{index + 1} / {contents.length}</span>
+                  <button type="button" className="hint-btn" onClick={goNext} disabled={index === contents.length - 1}>
                     <ChevronDown size={16} />
                   </button>
                 </div>
-
-                
               </div>
             </div>
           );
         })}
       </div>
-
-
     </div>
   );
 };
