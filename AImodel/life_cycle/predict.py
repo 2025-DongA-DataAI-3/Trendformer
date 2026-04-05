@@ -106,25 +106,61 @@ def predict_all_keywords():
     conn = None
     try:
         conn = pymysql.connect(**DB_CONFIG)
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT KEYWORD_NAME FROM T_KEYWORD")
-            keywords = [row[0] for row in cursor.fetchall()]
+        # 1. T_KEYWORD에서 모든 키워드와 ID 가져오기
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT KEYWORD_ID, KEYWORD_NAME FROM T_KEYWORD")
+            keywords_data = cursor.fetchall()
+            
+        print(f"총 {len(keywords_data)}개의 키워드 분석 시작...")
+
+        for row in keywords_data:
+            kw_id = row['KEYWORD_ID']
+            kw_name = row['KEYWORD_NAME']
+            
+            # 2. 생애주기 예측 실행
+            stage = predict_lifecycle(kw_name)
+            
+            # 3. 추가 통계 데이터 계산 (기존 get_keyword_stats 활용)
+            stats = get_keyword_stats(kw_name)
+            content_count = stats["CONTENT_COUNT"] if stats and stats["CONTENT_COUNT"] else 0
+            total_view = float(stats["TOTAL_VIEW"] or 0)
+            
+            # active_days 계산 (성장률 저장용)
+            first_upload = pd.to_datetime(stats["FIRST_UPLOAD"])
+            last_upload = pd.to_datetime(stats["LAST_UPLOAD"])
+            active_days = max((last_upload - first_upload).days, 1) if stats["FIRST_UPLOAD"] else 1
+            growth_rate = content_count / active_days
+
+            # 4. KEYWORD_METRIC 테이블에 결과 저장 (있으면 UPDATE, 없으면 INSERT)
+            # 상원님 DB의 KM_ID가 자동증가이므로 ON DUPLICATE KEY UPDATE 활용
+            update_sql = """
+                INSERT INTO KEYWORD_METRIC 
+                    (KEYWORD_ID, TOTAL_CONTENT_COUNT, TOTAL_VIEW_COUNT, GROWTH_RATE, LIFECYCLE_STAGE, RECORDED_AT)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                ON DUPLICATE KEY UPDATE
+                    TOTAL_CONTENT_COUNT = VALUES(TOTAL_CONTENT_COUNT),
+                    TOTAL_VIEW_COUNT = VALUES(TOTAL_VIEW_COUNT),
+                    GROWTH_RATE = VALUES(GROWTH_RATE),
+                    LIFECYCLE_STAGE = VALUES(LIFECYCLE_STAGE),
+                    RECORDED_AT = NOW()
+            """
+            
+            with conn.cursor() as cursor:
+                cursor.execute(update_sql, (kw_id, content_count, total_view, growth_rate, stage))
+            
+            # 변경사항 즉시 반영
+            conn.commit()
+            print(f" ✅ {kw_name} -> {stage} (저장 완료)")
+
     except Exception as e:
-        print(f"키워드 조회 실패: {e}")
-        return {}
+        print(f"❌ 분석 및 저장 중 오류 발생: {e}")
+        if conn: conn.rollback()
     finally:
         if conn:
             conn.close()
-
-    results = {}
-    for kw in keywords:
-        stage = predict_lifecycle(kw)
-        results[kw] = stage
-        print(f"  {kw}: {stage}")
-
-    return results
-
+            print("DB 연결 종료.")
 
 if __name__ == "__main__":
-    print("===== 전체 키워드 생애주기 예측 =====")
+    print("===== 🚀 AI 생애주기 분석 및 DB 저장 시작 =====")
     predict_all_keywords()
+    print("===== ✅ 모든 분석 작업 완료 =====")

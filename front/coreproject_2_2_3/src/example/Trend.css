@@ -1,310 +1,99 @@
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-button {
-  font: inherit;
-}
+/* Trend.css */
+* { box-sizing: border-box; }
+body { margin: 0; background: #f7fafc; }
 
 .trend-page {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 0;
-  background:
-    radial-gradient(circle at top, rgba(42, 201, 192, 0.1), transparent 30%),
-    linear-gradient(180deg, #f7fafc 0%, #edf3f6 48%, #e8eef2 100%);
 }
 
 .trend-phone-frame {
   width: 470px;
   max-width: 100%;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(42, 201, 192, 0.08), transparent 24%),
-    linear-gradient(180deg, #fbfeff 0%, #f4f9fb 44%, #eef4f7 100%);
-  border-left: 1px solid rgba(17, 38, 52, 0.08);
-  border-right: 1px solid rgba(17, 38, 52, 0.08);
-  box-shadow:
-    0 24px 60px rgba(31, 52, 67, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  color: #163243;
+  background: #fbfeff;
   position: relative;
-  overflow: hidden; /* 팀원2 */
+  overflow-y: auto; /* 프레임 자체에 스크롤 허용 */
+  box-shadow: 0 0 40px rgba(0,0,0,0.05);
 }
 
 .trend-content {
-  padding: 18px 14px 160px; /* 팀원2 - 드래그 핸들 공간 확보 */
+  padding: 15px 14px 40px; /* 상단 여백과 하단 탭바 여백 */
 }
 
-/* 상단 소개 카드 (팀원1) */
-.trend-hero-card {
-  padding: 18px;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 250, 252, 0.98) 100%);
-  border: 1px solid rgba(17, 38, 52, 0.08);
-  box-shadow:
-    0 12px 28px rgba(31, 52, 67, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
+.trend-list-label { font-size: 11px; font-weight: 900; color: #1c9da0; margin: 0; }
+.trend-list-title { font-size: 22px; font-weight: 900; margin: 2px 0 15px; color: #12202b; }
 
-.trend-hero-badge {
-  width: fit-content;
-  margin: 0 auto 16px;
-  padding: 8px 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #1b8f93 0%, #35bcb5 100%);
-  border: 1px solid rgba(42, 201, 192, 0.2);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 800;
-  box-shadow: 0 8px 18px rgba(53, 188, 181, 0.16);
-}
-
-.trend-hero-title {
-  margin: 0;
-  color: #12202b;
-  text-align: center;
-  font-size: 30px;
-  line-height: 1.45;
-  font-weight: 900;
-  word-break: keep-all;
-}
-
-.trend-hero-desc {
-  margin: 14px 0 0;
-  color: #68808e;
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.7;
-  word-break: keep-all;
-}
-
-.trend-hero-actions {
-  margin-top: 18px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.trend-chip-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(42, 201, 192, 0.18);
-  background: #ffffff;
-  color: #1f8a8a;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 6px 14px rgba(31, 52, 67, 0.06);
-}
-
-/* 리스트 영역 */
-.trend-list-section {
-  margin-top: 22px;
-}
-
-.trend-list-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.trend-list-label {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 1.3px;
-  color: #1c9da0;
-}
-
-.trend-list-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  color: #12202b;
-}
-
-.trend-quick-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(42, 201, 192, 0.18);
-  background: rgba(255, 255, 255, 0.96);
-  color: #1f8a8a;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 6px 14px rgba(31, 52, 67, 0.05);
-}
-
-/* 카테고리 카드 */
 .trend-category-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
 .trend-category-card {
-  text-align: left;
-  min-height: 120px;
   padding: 18px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(17, 38, 52, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(246, 251, 252, 1));
-  color: #12202b;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-  box-shadow: 0 10px 22px rgba(31, 52, 67, 0.06);
+  background: white;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.03);
+  text-align: left;
 }
 
-.trend-category-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(42, 201, 192, 0.28);
-  box-shadow: 0 14px 26px rgba(31, 52, 67, 0.1);
-}
+.trend-category-name { font-size: 17px; font-weight: 900; margin: 0; color: #12202b; }
+.trend-category-desc { font-size: 12.5px; color: #64748b; margin-top: 6px; line-height: 1.4; }
 
-.trend-category-card.is-highlight {
-  background: linear-gradient(180deg, rgba(232, 250, 248, 0.96), rgba(241, 252, 251, 1));
-  border-color: rgba(42, 201, 192, 0.32);
-}
-
-.trend-category-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.trend-category-name {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1.4;
-  word-break: keep-all;
-  color: #12202b;
-}
-
-.trend-category-icon {
-  color: #7c95a1;
-  flex-shrink: 0;
-}
-
-.trend-category-desc {
-  margin: 10px 0 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: #627987;
-  word-break: keep-all;
-}
-
-/* 하단 드래그 핸들 (팀원2) */
-.trend-lifecycle-handle-fixed-wrap {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 92px;
-  z-index: 50;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.trend-lifecycle-handle {
+/* 🔥 버튼 컨테이너: 카드 바로 밑에 붙도록 relative 설정 */
+.trend-rank-bar-container {
+  margin-top: 25px; /* 스포츠/이슈 카드와의 간격 */
   width: 100%;
-  height: 22px;
-  border: none;
-  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-pull-hint {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #1c9da0;
+  margin: 0;
+}
+
+.trend-lifecycle-rank-bar {
+  width: 100%;
+  height: 56px;
+  background: linear-gradient(90deg, #1c9da0, #35bcb5);
+  border-radius: 18px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: grab;
-  pointer-events: auto;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
+  justify-content: space-between;
+  padding: 0 20px;
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(28, 157, 160, 0.25);
 }
 
-.trend-lifecycle-handle:active {
-  cursor: grabbing;
+.trend-rank-bar-content { display: flex; align-items: center; gap: 8px; }
+
+/* 모달 애니메이션 관련 */
+.trend-rank-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4); z-index: 999;
 }
 
-.trend-lifecycle-handle-bar {
-  width: 100%;
-  max-width: 436px;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(42, 201, 192, 0.46), rgba(42, 201, 192, 0.98));
-  box-shadow:
-    0 2px 10px rgba(42, 201, 192, 0.18),
-    0 0 0 6px rgba(255, 255, 255, 0.84);
+.trend-rank-modal-motion {
+  position: fixed;
+  top: 70px; /* 카테고리 헤더 높이에 맞춰 조정 */
+  left: 0; right: 0; bottom: 0;
+  width: 470px; margin: 0 auto;
+  background: white;
+  z-index: 1000;
+  border-radius: 28px 28px 0 0;
+  display: flex; flex-direction: column;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
 }
 
-@media (max-width: 560px) {
-  .trend-page {
-    padding: 0;
-  }
-
-  .trend-phone-frame {
-    width: 100%;
-    border-left: none;
-    border-right: none;
-  }
-
-  .trend-content {
-    padding: 14px 12px 160px;
-  }
-
-  .trend-category-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .trend-list-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .trend-hero-title {
-    font-size: 24px;
-  }
-
-  .trend-category-name {
-    font-size: 18px;
-  }
-
-  .trend-category-desc {
-    font-size: 14px;
-  }
-
-  .trend-lifecycle-handle-fixed-wrap {
-    left: 12px;
-    right: 12px;
-    bottom: 92px;
-  }
-
-  .trend-lifecycle-handle-bar {
-    max-width: none;
-  }
-}
+.trend-modal-handle { width: 100%; height: 35px; display: flex; justify-content: center; align-items: center; cursor: grab; }
+.handle-bar { width: 45px; height: 5px; background: #e2e8f0; border-radius: 10px; }
+.trend-modal-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 100px;}

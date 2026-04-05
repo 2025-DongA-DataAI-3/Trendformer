@@ -1,0 +1,171 @@
+.rk-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background-color: #f8fafc; /* 밝은 회색 배경 */
+}
+
+.rk-phone-frame {
+  width: 470px;
+  max-width: 100%;
+  background-color: #ffffff;
+  min-height: 100vh;
+  box-shadow: 0 0 40px rgba(0,0,0,0.05);
+  color: #1e293b; /* ✅ 기본 글자색을 어두운 네이비로 설정 */
+}
+
+.rk-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 10;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rk-back-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #1e293b; /* ✅ 뒤로가기 버튼 어둡게 */
+}
+
+.rk-nav-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b; /* ✅ 타이틀 어둡게 */
+}
+
+.rk-content {
+  padding: 0 20px 40px;
+}
+
+.rk-intro {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.rk-main-title {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 8px;
+  color: #0f172a; /* ✅ 메인 제목 아주 어둡게 */
+}
+
+.rk-main-desc {
+  font-size: 14px;
+  color: #475569; /* ✅ 설명글 진한 회색 */
+  line-height: 1.6;
+}
+
+/* 리스트 아이템 스타일 */
+.rk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rk-item {
+  display: flex;
+  align-items: center;
+  padding: 18px;
+  background: #f1f5f9; /* 연한 회색 카드 배경 */
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.rk-item:hover {
+  background: #fff;
+  border-color: #1c9da0;
+  box-shadow: 0 8px 16px rgba(28, 157, 160, 0.1);
+}
+
+/* 1, 2, 3위 강조 */
+.rk-top-tier {
+  background: #fff;
+  border: 2px solid #1c9da0;
+}
+
+.rk-rank-num {
+  width: 36px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #94a3b8; /* 기본 순위 숫자 */
+}
+
+.rk-top-tier .rk-rank-num {
+  color: #1c9da0; /* ✅ 상위권 포인트 컬러 */
+}
+
+.rk-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rk-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b; /* ✅ 키워드 이름 진하게 */
+}
+
+.rk-meta {
+  font-size: 12px;
+  color: #64748b; /* 콘텐츠 개수 정보 */
+  margin-top: 2px;
+}
+
+.rk-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rk-score {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1c9da0; /* 점수는 민트색 유지 */
+}
+
+.rk-arrow {
+  color: #94a3b8;
+  font-weight: bold;
+}
+
+.rk-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* 간격 살짝 축소 */
+  margin-bottom: 2px;
+}
+
+.rk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px; /* 글씨 크기 살짝 축소해서 더 이모지 같게 */
+  font-weight: 800;
+  padding: 2px 6px; /* 패딩 축소 */
+  border-radius: 4px; /* 둥근 사각형 느낌 */
+  line-height: 1; /* 수직 중앙 맞춤 */
+}
+
+/* 성장 단계 배지: 민트색 톤 */
+.stage-growth {
+  background-color: #e0f2f1; /* 아주 연한 민트 배경 */
+  color: #1c9da0; /* 진한 민트 글씨 */
+}
+
+/* 성숙 단계 배지: 보라색 톤 */
+.stage-mature {
+  background-color: #f3e5f5; /* 아주 연한 보라 배경 */
+  color: #8e24aa; /* 진한 보라 글씨 */
+}

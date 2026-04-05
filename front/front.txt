@@ -4,3 +4,6 @@
 npm i
 npm install multer
 npm i express
+
+npm install chart.js react-chartjs-2
+npm install framer-motion
