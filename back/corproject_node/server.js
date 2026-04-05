@@ -262,9 +262,6 @@ app.get("/search-content/:userId", (req, res) => {
 // 카테고리, 키워드 분류
 runAiScheduler()
 
-// 카테고리, 키워드 분류
-runAiScheduler()
-
 app.listen(3002, () => {
   console.log("서버 실행 중: http://localhost:3002")
 })
