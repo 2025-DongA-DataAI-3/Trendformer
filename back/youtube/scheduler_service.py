@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from crawler_service import run_save_urls_and_extract_mp4
-
+from mp4_update_service import extract_mp4_from_db_urls
 
 # =========================================================
 # 스케줄 작업
@@ -27,6 +27,17 @@ def scheduled_job():
         print("===== 스케줄러 오류 =====")
         print(e)
 
+def mp4_refresh_job():  # 추가
+    print(f"\n===== MP4 URL 갱신 시작 =====")
+    print(datetime.now())
+
+    try:
+        extract_mp4_from_db_urls()
+        print("===== MP4 URL 갱신 완료 =====")
+
+    except Exception as e:
+        print("===== MP4 갱신 오류 =====")
+        print(e)
 
 # =========================================================
 # 실행
@@ -40,6 +51,7 @@ def run_scheduler():
 
     # 3시간마다 반복
     schedule.every(3).hours.do(scheduled_job)
+    schedule.every(3).hours.do(mp4_refresh_job)
 
     print("===== 3시간 자동 수집 등록 완료 =====")
 
