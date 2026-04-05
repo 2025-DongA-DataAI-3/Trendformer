@@ -70,9 +70,15 @@ const ImageSlider = () => {
         return res.json();
       })
       .then((data) => {
-        const safeData = Array.isArray(data) ? data : [];
-        setContents(safeData);
-      })
+  const safeData = Array.isArray(data) ? data : [];
+  // FILE_PATH 있는 것만 필터링
+  const filtered = safeData.filter((item) => {
+    const platform = item.PLATFORM_TYPE?.toLowerCase();
+    if (platform === "tiktok" || platform === "instagram") return true; // 틱톡/인스타는 FILE_PATH 불필요
+    return !!item.FILE_PATH; // 유튜브는 FILE_PATH 있어야만 표시
+  });
+  setContents(filtered);
+})
       .catch((err) => {
         console.error("콘텐츠 불러오기 실패:", err);
       });
@@ -390,11 +396,6 @@ const ImageSlider = () => {
                 </div>
 
                 <div className="video-gradient" />
-
-                <div className="viewer-top-chip">
-                  <span className="viewer-live-dot" />
-                  {i < 10 ? `${i + 1}위 🔥` : `${i + 1}위`}
-                </div>
 
                 <div className="video-overlay">
                   <div className="video-meta-line">
