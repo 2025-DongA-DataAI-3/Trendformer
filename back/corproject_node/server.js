@@ -5,6 +5,8 @@ const path = require('path')
 const { runAiScheduler } = require('./routes/gpt')
 const searchRouter = require("./routes/search")
 const session = require("express-session")
+const interactionRouter = require("./routes/interaction");
+
 
 const cors = require('cors')
 app.use(cors({
@@ -14,6 +16,7 @@ app.use(cors({
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use("/interaction", interactionRouter);
 
 app.use(session({
   secret: "trendformer",
@@ -33,13 +36,13 @@ app.use('/upload', uploadRouter)
 app.use('/user', userRouter)
 
 // 유튜브 Python 실행
-const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
-const pythonProcess = spawn('python', [pythonFilePath], {
-  stdio: 'inherit',
-  shell: true
-})
-pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
-pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
+// const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
+// const pythonProcess = spawn('python', [pythonFilePath], {
+//   stdio: 'inherit',
+//   shell: true
+// })
+// pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
+// pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
 
 // 인스타 스케줄러 실행
 // const instaScheduler = spawn('python', ['scheduler.py'], {
@@ -51,13 +54,13 @@ pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨
 // instaScheduler.on('close', (code) => { console.log(`인스타 스케줄러 종료, 코드: ${code}`) })
 
 // 틱톡 스케줄러 실행
-const tiktokScheduler = spawn('python', ['scheduler.py'], {
-  cwd: path.join(__dirname, '..', 'tiktok'),
-  stdio: 'inherit',
-  shell: true
-})
-tiktokScheduler.on('error', (err) => { console.error('틱톡 스케줄러 오류:', err) })
-tiktokScheduler.on('close', (code) => { console.log(`틱톡 스케줄러 종료, 코드: ${code}`) })
+// const tiktokScheduler = spawn('python', ['scheduler.py'], {
+//   cwd: path.join(__dirname, '..', 'tiktok'),
+//   stdio: 'inherit',
+//   shell: true
+// })
+// tiktokScheduler.on('error', (err) => { console.error('틱톡 스케줄러 오류:', err) })
+// tiktokScheduler.on('close', (code) => { console.log(`틱톡 스케줄러 종료, 코드: ${code}`) })
 
 // 카테고리 전체 조회
 app.get("/category", (req, res) => {

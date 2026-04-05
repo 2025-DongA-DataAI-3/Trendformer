@@ -51,6 +51,7 @@ const Search = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const location = useLocation();
+  const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState([]);
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -62,33 +63,49 @@ const Search = () => {
   }, []);
 
   useEffect(() => {
-  if (location.state?.reset) {
-    const content = document.querySelector(".tf-content");
-    if (content) {
-      content.scrollTo({ top: 0, behavior: "smooth" });
+    if (location.state?.reset) {
+      const content = document.querySelector(".tf-content");
+      if (content) {
+        content.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
-  }
-}, [location]);
+  }, [location]);
+
+  const getLoginUserId = () => {
+    const storedLoginUser = localStorage.getItem("user");
+    const loginUser = storedLoginUser ? JSON.parse(storedLoginUser) : null;
+    return loginUser?.USER_ID || loginUser?.id || null;
+  };
 
   const loadContents = async ({ keyword = "", isFirst = false }) => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (!storedUser?.id) {
+    const userId = getLoginUserId();
+    if (!userId) {
       console.error("로그인한 사용자 정보가 없습니다.");
       return;
     }
+
     setLoading(true);
+
     try {
-      const url = new URL(`http://localhost:3002/search-content/${storedUser.id}`);
+      const url = new URL(`http://localhost:3002/search-content/${userId}`);
       url.searchParams.set("limit", LIMIT);
+
       if (keyword.trim()) url.searchParams.set("keyword", keyword.trim());
+
       const currentList = isFirst ? [] : filteredContents;
       const excludeIds = currentList.map((item) => item.CONTENT_ID).filter(Boolean);
-      if (excludeIds.length > 0) url.searchParams.set("excludeIds", excludeIds.join(","));
+
+      if (excludeIds.length > 0) {
+        url.searchParams.set("excludeIds", excludeIds.join(","));
+      }
+
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
+
       const data = await res.json();
       const safeData = Array.isArray(data) ? data : [];
       const shuffled = shuffleArray(safeData);
+
       if (isFirst) {
         setContents(shuffled);
         setFilteredContents(shuffled);
@@ -96,6 +113,7 @@ const Search = () => {
         setContents((prev) => [...prev, ...shuffled]);
         setFilteredContents((prev) => [...prev, ...shuffled]);
       }
+
       setHasMore(safeData.length === LIMIT);
     } catch (err) {
       console.error("콘텐츠 불러오기 실패:", err);
@@ -114,14 +132,17 @@ const Search = () => {
         setShowSuggestPanel(false);
       }
     };
+
     const handleEsc = (event) => {
       if (event.key === "Escape") {
         setShowSuggestPanel(false);
         setSelectedVideo(null);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEsc);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEsc);
@@ -145,6 +166,7 @@ const Search = () => {
   const saveHistory = (keyword) => {
     const trimmed = keyword.trim();
     if (!trimmed) return;
+
     const updated = [trimmed, ...history.filter((item) => item !== trimmed)].slice(0, 10);
     setHistory(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -153,13 +175,16 @@ const Search = () => {
   const saveSearchLogToServer = async (keyword) => {
     const trimmed = keyword.trim();
     if (!trimmed) return false;
+
     try {
       const storedLoginUser = localStorage.getItem("user");
       const loginUser = storedLoginUser ? JSON.parse(storedLoginUser) : null;
+
       if (!loginUser || !(loginUser.USER_ID || loginUser.id)) {
         console.log("로그인 사용자 정보 없음 → 검색 로그 저장 안함");
         return false;
       }
+
       const res = await fetch("http://localhost:3002/search/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -169,11 +194,14 @@ const Search = () => {
           search_word: trimmed,
         }),
       });
+
       const data = await res.json();
+
       if (!res.ok) {
         console.error("검색 로그 저장 실패:", data);
         return false;
       }
+
       return true;
     } catch (err) {
       console.error("검색 로그 저장 실패:", err);
@@ -186,10 +214,12 @@ const Search = () => {
     setShowSuggestPanel(false);
     setQuery(trimmed);
     setHasMore(true);
+
     if (!trimmed) {
       await loadContents({ keyword: "", isFirst: true });
       return;
     }
+
     saveHistory(trimmed);
     await saveSearchLogToServer(trimmed);
     await loadContents({ keyword: trimmed, isFirst: true });
@@ -259,66 +289,183 @@ const Search = () => {
     isVideo: true,
   });
 
-const toggleLike = (post) => {
-  const postId = post.CONTENT_ID;
-  const current = getLikeInfo(postId, Number(post.LIKES) || 0);
-  const willLike = !current.liked;
-  const next = {
-    liked: willLike,
-    count: willLike ? current.count + 1 : Math.max(current.count - 1, 0),
-  };
-  const updatedLikes = { ...likeState, [postId]: next };
-  setLikeState(updatedLikes);
-  localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
-};
-
-  const toggleSave = (post) => {
+  const toggleLike = async (post) => {
+    const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
-    const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
-    const exists = currentSaved.some((item) => item.id === postId);
-    const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
-    const nextSaved = exists
-      ? currentSaved.filter((item) => item.id !== postId)
-      : [createSavedPost(post, likeInfo.count), ...currentSaved];
-    setSavedPosts(nextSaved);
-    localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+
+    if (!userId || !postId) {
+      console.error("좋아요 처리 실패: userId 또는 contentId 없음");
+      return;
+    }
+
+    const current = getLikeInfo(postId, Number(post.LIKES) || 0);
+
+    try {
+      const res = await fetch("http://localhost:3002/interaction/like", {
+        method: current.liked ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          content_id: postId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "좋아요 처리 실패");
+      }
+
+      const next = {
+        liked: !current.liked,
+        count: current.liked
+          ? Math.max(current.count - 1, 0)
+          : current.count + 1,
+      };
+
+      const updatedLikes = { ...likeState, [postId]: next };
+      setLikeState(updatedLikes);
+      localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
+    } catch (error) {
+      console.error("좋아요 처리 실패:", error);
+    }
+  };
+
+  const toggleSave = async (post) => {
+    const userId = getLoginUserId();
+    const postId = post.CONTENT_ID;
+
+    if (!userId || !postId) {
+      console.error("북마크 처리 실패: userId 또는 contentId 없음");
+      return;
+    }
+
+    const saved = isSaved(postId);
+
+    try {
+      const res = await fetch("http://localhost:3002/interaction/bookmark", {
+        method: saved ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          content_id: postId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "북마크 처리 실패");
+      }
+
+      const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
+      const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
+
+      const nextSaved = saved
+        ? currentSaved.filter((item) => item.id !== postId)
+        : [createSavedPost(post, likeInfo.count), ...currentSaved.filter((item) => item.id !== postId)];
+
+      setSavedPosts(nextSaved);
+      localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+    } catch (error) {
+      console.error("보관 처리 실패:", error);
+    }
   };
 
   const personalizedKeywords = useMemo(() => {
     const source = [...history, ...defaultAiKeywords];
     const unique = [...new Set(source)].filter(Boolean);
-    return unique.map((keyword, index) => ({
-      id: `${keyword}-${index}`,
-      label: keyword,
-      reason: index < Math.max(1, Math.ceil(history.length * 0.6)) ? "최근 검색 기반" : "AI 추천",
-    })).slice(0, 8);
+    return unique
+      .map((keyword, index) => ({
+        id: `${keyword}-${index}`,
+        label: keyword,
+        reason: index < Math.max(1, Math.ceil(history.length * 0.6)) ? "최근 검색 기반" : "AI 추천",
+      }))
+      .slice(0, 8);
   }, [history]);
 
-  const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState([]);
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setAutoCompleteSuggestions([]);
+      return;
+    }
 
-useEffect(() => {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    setAutoCompleteSuggestions([]);
-    return;
-  }
+    const userId = getLoginUserId();
+    if (!userId) return;
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  if (!storedUser?.id) return;
+    const url = new URL(`http://localhost:3002/search-content/${userId}`);
+    url.searchParams.set("limit", 8);
+    url.searchParams.set("keyword", trimmed);
 
-  const url = new URL(`http://localhost:3002/search-content/${storedUser.id}`);
-  url.searchParams.set("limit", 8);
-  url.searchParams.set("keyword", trimmed);
+    fetch(url.toString())
+      .then((res) => res.json())
+      .then((data) => {
+        const safeData = Array.isArray(data) ? data : [];
+        const titles = [...new Set(safeData.map((item) => item.TITLE).filter(Boolean))];
+        setAutoCompleteSuggestions(titles.slice(0, 5));
+      })
+      .catch(() => setAutoCompleteSuggestions([]));
+  }, [query]);
 
-  fetch(url.toString())
-    .then((res) => res.json())
-    .then((data) => {
-      const safeData = Array.isArray(data) ? data : [];
-      const titles = [...new Set(safeData.map((item) => item.TITLE).filter(Boolean))];
-      setAutoCompleteSuggestions(titles.slice(0, 5));
-    })
-    .catch(() => setAutoCompleteSuggestions([]));
-}, [query]);
+  useEffect(() => {
+    const fetchInteractionStates = async () => {
+      const userId = getLoginUserId();
+      if (!userId || filteredContents.length === 0) return;
+
+      try {
+        const likeMap = {};
+        const savedList = [];
+
+        for (const item of filteredContents) {
+          const contentId = item.CONTENT_ID;
+          if (!contentId) continue;
+
+          const [likeRes, bookmarkRes] = await Promise.all([
+            fetch(
+              `http://localhost:3002/interaction/like-status?user_id=${encodeURIComponent(
+                userId
+              )}&content_id=${encodeURIComponent(contentId)}`
+            ),
+            fetch(
+              `http://localhost:3002/interaction/bookmark-status?user_id=${encodeURIComponent(
+                userId
+              )}&content_id=${encodeURIComponent(contentId)}`
+            ),
+          ]);
+
+          const likeData = await likeRes.json();
+          const bookmarkData = await bookmarkRes.json();
+
+          likeMap[contentId] = {
+            liked: likeData.success ? likeData.liked : false,
+            count: Number(item.LIKES) || 0,
+          };
+
+          if (bookmarkData.success && bookmarkData.bookmarked) {
+            savedList.push(createSavedPost(item, Number(item.LIKES) || 0));
+          }
+        }
+
+        setLikeState((prev) => {
+          const merged = { ...prev, ...likeMap };
+          localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+
+        setSavedPosts(savedList);
+        localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(savedList));
+      } catch (error) {
+        console.error("좋아요/북마크 상태 조회 실패:", error);
+      }
+    };
+
+    fetchInteractionStates();
+  }, [filteredContents]);
 
   const suggestionHistory = history.slice(0, 6);
   const suggestionAi = personalizedKeywords.slice(0, 4);
@@ -353,79 +500,110 @@ useEffect(() => {
               className="tf-search-input"
             />
             {query && (
-              <button type="button" className="tf-search-clear-btn" onClick={(e) => { e.stopPropagation(); handleResetSearch(); }}>
+              <button
+                type="button"
+                className="tf-search-clear-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResetSearch();
+                }}
+              >
                 <X size={16} />
               </button>
             )}
           </div>
-          <button type="submit" className="tf-search-submit-btn">검색</button>
+          <button type="submit" className="tf-search-submit-btn">
+            검색
+          </button>
         </form>
 
         {showSuggestPanel && (
-  <div className="tf-suggest-panel">
-    
-    {/* 자동완성 - 타이핑 중일 때 맨 위에 리스트로 */}
-    {query.trim() && autoCompleteSuggestions.length > 0 && (
-      <div className="tf-autocomplete-list">
-        {autoCompleteSuggestions.map((item, index) => (
-          <button
-            type="button"
-            className="tf-autocomplete-item"
-            key={`${item}-${index}`}
-            onClick={() => handleAutoCompleteClick(item)}
-          >
-            <SearchIcon size={14} className="tf-autocomplete-icon" />
-            <span>{item}</span>
-          </button>
-        ))}
-      </div>
-    )}
-
-    {/* 최근검색어 + AI추천 */}
-    <div className="tf-suggest-grid">
-      <section className="tf-suggest-section history-block">
-        <div className="tf-suggest-head">
-          <div className="tf-suggest-title-wrap">
-            <History size={16} />
-            <h3>최근 검색어</h3>
-          </div>
-          {history.length > 0 && (
-            <button type="button" className="tf-suggest-clear-all" onClick={handleClearHistory}>전체 삭제</button>
-          )}
-        </div>
-        {suggestionHistory.length > 0 ? (
-          <div className="tf-history-list">
-            {suggestionHistory.map((item) => (
-              <div className="tf-history-item" key={item}>
-                <button type="button" className="tf-history-keyword" onClick={() => handleSearch(item)}>{item}</button>
-                <button type="button" className="tf-history-delete" onClick={() => handleDeleteHistoryItem(item)}><X size={14} /></button>
+          <div className="tf-suggest-panel">
+            {query.trim() && autoCompleteSuggestions.length > 0 && (
+              <div className="tf-autocomplete-list">
+                {autoCompleteSuggestions.map((item, index) => (
+                  <button
+                    type="button"
+                    className="tf-autocomplete-item"
+                    key={`${item}-${index}`}
+                    onClick={() => handleAutoCompleteClick(item)}
+                  >
+                    <SearchIcon size={14} className="tf-autocomplete-icon" />
+                    <span>{item}</span>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="tf-empty-text">아직 검색 기록이 없어요.</p>
-        )}
-      </section>
+            )}
 
-      <section className="tf-suggest-section ai-block">
-        <div className="tf-suggest-head">
-          <div className="tf-suggest-title-wrap">
-            <WandSparkles size={16} />
-            <h3>AI 추천 검색어</h3>
+            <div className="tf-suggest-grid">
+              <section className="tf-suggest-section history-block">
+                <div className="tf-suggest-head">
+                  <div className="tf-suggest-title-wrap">
+                    <History size={16} />
+                    <h3>최근 검색어</h3>
+                  </div>
+                  {history.length > 0 && (
+                    <button
+                      type="button"
+                      className="tf-suggest-clear-all"
+                      onClick={handleClearHistory}
+                    >
+                      전체 삭제
+                    </button>
+                  )}
+                </div>
+
+                {suggestionHistory.length > 0 ? (
+                  <div className="tf-history-list">
+                    {suggestionHistory.map((item) => (
+                      <div className="tf-history-item" key={item}>
+                        <button
+                          type="button"
+                          className="tf-history-keyword"
+                          onClick={() => handleSearch(item)}
+                        >
+                          {item}
+                        </button>
+                        <button
+                          type="button"
+                          className="tf-history-delete"
+                          onClick={() => handleDeleteHistoryItem(item)}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="tf-empty-text">아직 검색 기록이 없어요.</p>
+                )}
+              </section>
+
+              <section className="tf-suggest-section ai-block">
+                <div className="tf-suggest-head">
+                  <div className="tf-suggest-title-wrap">
+                    <WandSparkles size={16} />
+                    <h3>AI 추천 검색어</h3>
+                  </div>
+                </div>
+
+                <div className="tf-ai-list">
+                  {suggestionAi.map((item) => (
+                    <button
+                      type="button"
+                      className="tf-ai-item"
+                      key={item.id}
+                      onClick={() => handleSearch(item.label)}
+                    >
+                      <span className="tf-ai-keyword">{item.label}</span>
+                      <span className="tf-ai-reason">{item.reason}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
           </div>
-        </div>
-        <div className="tf-ai-list">
-          {suggestionAi.map((item) => (
-            <button type="button" className="tf-ai-item" key={item.id} onClick={() => handleSearch(item.label)}>
-              <span className="tf-ai-keyword">{item.label}</span>
-              <span className="tf-ai-reason">{item.reason}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
-  </div>
-)}
+        )}
       </section>
 
       <section className="tf-search-feed-head">
@@ -440,19 +618,50 @@ useEffect(() => {
           filteredContents.map((item, index) => {
             const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
             const saved = isSaved(item.CONTENT_ID);
+
             return (
-              <button type="button" className="tf-search-card" key={item.CONTENT_ID || index} onClick={() => openVideoModal(item)}>
+              <div
+                className="tf-search-card"
+                key={item.CONTENT_ID || index}
+                onClick={() => openVideoModal(item)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    openVideoModal(item);
+                  }
+                }}
+              >
                 {item.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
-                  <iframe src={getInstagramEmbedUrl(item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH)} className="tf-search-card-video instagram-card-frame" title={item.TITLE || "instagram card"} allowFullScreen />
+                  <iframe
+                    src={getInstagramEmbedUrl(item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH)}
+                    className="tf-search-card-video instagram-card-frame"
+                    title={item.TITLE || "instagram card"}
+                    allowFullScreen
+                  />
                 ) : item.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
-                  <iframe src={item.FILE_PATH} className="tf-search-card-video tiktok-card-frame" title={item.TITLE || "tiktok card"} allowFullScreen />
+                  <iframe
+                    src={item.FILE_PATH}
+                    className="tf-search-card-video tiktok-card-frame"
+                    title={item.TITLE || "tiktok card"}
+                    allowFullScreen
+                  />
                 ) : (
-                  <video src={getVideoUrl(item.FILE_PATH)} className="tf-search-card-video" muted playsInline preload="metadata" />
+                  <video
+                    src={getVideoUrl(item.FILE_PATH)}
+                    className="tf-search-card-video"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
                 )}
+
                 <div className="tf-search-card-overlay" />
+
                 <div className="tf-search-card-top">
                   <span className="tf-search-card-badge">{item.PLATFORM_TYPE || "Meme"}</span>
                 </div>
+
                 <div className="tf-search-card-bottom">
                   <strong>
                     {(item.TITLE || "트렌딩 밈 콘텐츠").slice(0, 15)}
@@ -460,11 +669,32 @@ useEffect(() => {
                   </strong>
                   <span>@{(item.USER_ID || "unknown").slice(0, 10)}</span>
                 </div>
+
                 <div className="tf-search-card-stats">
-                  <span><Heart size={13} />{likeInfo.count}</span>
-                  <span className={saved ? "saved" : ""}><Bookmark size={13} />{saved ? "저장" : "보관"}</span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLike(item);
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Heart size={13} fill={likeInfo.liked ? "currentColor" : "none"} />
+                    {likeInfo.count}
+                  </span>
+
+                  <span
+                    className={saved ? "saved" : ""}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSave(item);
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Bookmark size={13} fill={saved ? "currentColor" : "none"} />
+                    {saved ? "저장" : "보관"}
+                  </span>
                 </div>
-              </button>
+              </div>
             );
           })
         ) : (
@@ -477,7 +707,12 @@ useEffect(() => {
 
       {hasMore && (
         <div className="tf-load-more-wrap">
-          <button type="button" className="tf-load-more-btn" onClick={handleLoadMore} disabled={loading}>
+          <button
+            type="button"
+            className="tf-load-more-btn"
+            onClick={handleLoadMore}
+            disabled={loading}
+          >
             {loading ? "불러오는 중..." : "더보기"}
           </button>
         </div>
@@ -490,40 +725,81 @@ useEffect(() => {
               <X size={22} />
             </button>
 
-            {/* 영상 플레이어 */}
-            <div className={`tf-video-modal-player-wrap ${
-              selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? "instagram-modal"
-              : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? "tiktok-modal" : ""
-            }`}>
+            <div
+              className={`tf-video-modal-player-wrap ${
+                selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
+                  ? "instagram-modal"
+                  : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
+                  ? "tiktok-modal"
+                  : ""
+              }`}
+            >
               {selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
-                <iframe src={getInstagramEmbedUrl(selectedVideo.ORIGINAL_URL || selectedVideo.ORIGINAL_LINK || selectedVideo.FILE_PATH)} className="tf-video-modal-video instagram-modal-frame" title="instagram modal" allowFullScreen />
+                <iframe
+                  src={getInstagramEmbedUrl(
+                    selectedVideo.ORIGINAL_URL || selectedVideo.ORIGINAL_LINK || selectedVideo.FILE_PATH
+                  )}
+                  className="tf-video-modal-video instagram-modal-frame"
+                  title="instagram modal"
+                  allowFullScreen
+                />
               ) : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
-                <iframe src={selectedVideo.FILE_PATH} className="tf-video-modal-video tiktok-modal-frame" title="tiktok modal" allowFullScreen />
+                <iframe
+                  src={selectedVideo.FILE_PATH}
+                  className="tf-video-modal-video tiktok-modal-frame"
+                  title="tiktok modal"
+                  allowFullScreen
+                />
               ) : (
-                <video src={getVideoUrl(selectedVideo.FILE_PATH)} className="tf-video-modal-video" controls autoPlay playsInline />
+                <video
+                  src={getVideoUrl(selectedVideo.FILE_PATH)}
+                  className="tf-video-modal-video"
+                  controls
+                  autoPlay
+                  playsInline
+                />
               )}
             </div>
 
-            {/* 정보 영역 */}
             <div className="tf-video-modal-info">
-
-              {/* 좋아요 / 저장 버튼 - 흰 영역으로 이동 */}
               <div className="tf-video-modal-floating">
                 <button
                   type="button"
-                  className={`tf-floating-btn ${getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked ? "liked" : ""}`}
-                  onClick={(e) => { e.stopPropagation(); toggleLike(selectedVideo); }}
+                  className={`tf-floating-btn ${
+                    getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked
+                      ? "liked"
+                      : ""
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(selectedVideo);
+                  }}
                 >
-                  <Heart size={18} fill={getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked ? "currentColor" : "none"} />
-                  <span>{getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).count}</span>
+                  <Heart
+                    size={18}
+                    fill={
+                      getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked
+                        ? "currentColor"
+                        : "none"
+                    }
+                  />
+                  <span>
+                    {getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).count}
+                  </span>
                 </button>
 
                 <button
                   type="button"
                   className={`tf-floating-btn ${isSaved(selectedVideo.CONTENT_ID) ? "saved" : ""}`}
-                  onClick={(e) => { e.stopPropagation(); toggleSave(selectedVideo); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSave(selectedVideo);
+                  }}
                 >
-                  <Bookmark size={18} fill={isSaved(selectedVideo.CONTENT_ID) ? "currentColor" : "none"} />
+                  <Bookmark
+                    size={18}
+                    fill={isSaved(selectedVideo.CONTENT_ID) ? "currentColor" : "none"}
+                  />
                   <span>{isSaved(selectedVideo.CONTENT_ID) ? "저장됨" : "저장"}</span>
                 </button>
               </div>
@@ -542,17 +818,32 @@ useEffect(() => {
               </div>
 
               <h3>{selectedVideo.TITLE || "제목 없음"}</h3>
-              <p>{selectedVideo.PLATFORM_TYPE ? `플랫폼 · ${selectedVideo.PLATFORM_TYPE}` : "플랫폼 정보 없음"}</p>
+              <p>
+                {selectedVideo.PLATFORM_TYPE
+                  ? `플랫폼 · ${selectedVideo.PLATFORM_TYPE}`
+                  : "플랫폼 정보 없음"}
+              </p>
 
               {(selectedVideo.ORIGINAL_URL || selectedVideo.ORIGINAL_LINK) && (
-                <a href={selectedVideo.ORIGINAL_URL || selectedVideo.ORIGINAL_LINK} target="_blank" rel="noreferrer" className="tf-original-link">
+                <a
+                  href={selectedVideo.ORIGINAL_URL || selectedVideo.ORIGINAL_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tf-original-link"
+                >
                   원본 보러가기
                 </a>
               )}
 
               <div className="tf-video-modal-meta-line">
-                <span className="tf-modal-chip"><Play size={13} />밈 미리보기</span>
-                <span className="tf-modal-chip"><Sparkles size={13} />추천 탐색</span>
+                <span className="tf-modal-chip">
+                  <Play size={13} />
+                  밈 미리보기
+                </span>
+                <span className="tf-modal-chip">
+                  <Sparkles size={13} />
+                  추천 탐색
+                </span>
               </div>
             </div>
           </div>
