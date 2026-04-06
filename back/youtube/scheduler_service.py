@@ -47,8 +47,8 @@ def run_scheduler():
     print("===== 자동 크롤링 서버 시작 =====")
 
     # 서버 시작 즉시 실행
-    scheduled_job()
     mp4_refresh_job()
+    scheduled_job()
 
     # 3시간마다 반복
     schedule.every(3).hours.do(scheduled_job)

@@ -1,13 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Search as SearchIcon,
   X,
   Heart,
-  Sparkles,
   History,
-  WandSparkles,
-  Play,
   Bookmark,
 } from "lucide-react";
 import "./Search.css";
@@ -17,17 +14,6 @@ const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
 
 const LIMIT = 10;
-
-const defaultAiKeywords = [
-  "유행어 밈",
-  "챌린지 숏폼",
-  "동물 리액션",
-  "게임 밈",
-  "공감짤",
-  "드라마 패러디",
-  "최신 밈",
-  "오늘 뜨는 숏폼",
-];
 
 const shuffleArray = (array) => {
   const copied = [...array];
@@ -52,6 +38,7 @@ const Search = () => {
   const [loading, setLoading] = useState(false);
   const location = useLocation();
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState([]);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -77,41 +64,46 @@ const Search = () => {
     return loginUser?.USER_ID || loginUser?.id || null;
   };
 
-  const loadContents = async ({ keyword = "", isFirst = false }) => {
-    const userId = getLoginUserId();
-    if (!userId) {
-      console.error("로그인한 사용자 정보가 없습니다.");
-      return;
+  const getSearchApiUrl = (userId, keyword, currentPage) => {
+    const baseUrl = userId
+      ? `http://localhost:3002/search-content/${userId}`
+      : "http://localhost:3002/search-content";
+
+    const url = new URL(baseUrl);
+    url.searchParams.set("limit", LIMIT);
+    url.searchParams.set("offset", currentPage * LIMIT);
+
+    if (keyword.trim()) {
+      url.searchParams.set("keyword", keyword.trim());
     }
+
+    return url;
+  };
+
+  const loadContents = async ({ keyword = "", currentPage = 0, isFirst = false }) => {
+    const userId = getLoginUserId();
 
     setLoading(true);
 
     try {
-      const url = new URL(`http://localhost:3002/search-content/${userId}`);
-      url.searchParams.set("limit", LIMIT);
-
-      if (keyword.trim()) url.searchParams.set("keyword", keyword.trim());
-
-      const currentList = isFirst ? [] : filteredContents;
-      const excludeIds = currentList.map((item) => item.CONTENT_ID).filter(Boolean);
-
-      if (excludeIds.length > 0) {
-        url.searchParams.set("excludeIds", excludeIds.join(","));
-      }
+      const url = getSearchApiUrl(userId, keyword, currentPage);
 
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
 
       const data = await res.json();
       const safeData = Array.isArray(data) ? data : [];
-      const shuffled = shuffleArray(safeData);
+      const displayData = shuffleArray(safeData);
 
       if (isFirst) {
-        setContents(shuffled);
-        setFilteredContents(shuffled);
+        setContents(displayData);
+        setFilteredContents(displayData);
       } else {
-        setContents((prev) => [...prev, ...shuffled]);
-        setFilteredContents((prev) => [...prev, ...shuffled]);
+        setContents((prev) => {
+          const merged = [...prev, ...displayData];
+          setFilteredContents(merged);
+          return merged;
+        });
       }
 
       setHasMore(safeData.length === LIMIT);
@@ -123,7 +115,7 @@ const Search = () => {
   };
 
   useEffect(() => {
-    loadContents({ keyword: "", isFirst: true });
+    loadContents({ keyword: "", currentPage: 0, isFirst: true });
   }, []);
 
   useEffect(() => {
@@ -163,6 +155,18 @@ const Search = () => {
     return cleanUrl.endsWith("/") ? `${cleanUrl}embed` : `${cleanUrl}/embed`;
   };
 
+  const getTikTokEmbedUrl = (url) => {
+    if (!url) return "";
+
+    const cleanUrl = String(url).trim();
+    const match = cleanUrl.match(/\/video\/(\d+)/);
+
+    if (!match) return "";
+
+    const videoId = match[1];
+    return `https://www.tiktok.com/embed/v3/${videoId}`;
+  };
+
   const saveHistory = (keyword) => {
     const trimmed = keyword.trim();
     if (!trimmed) return;
@@ -181,7 +185,6 @@ const Search = () => {
       const loginUser = storedLoginUser ? JSON.parse(storedLoginUser) : null;
 
       if (!loginUser || !(loginUser.USER_ID || loginUser.id)) {
-        console.log("로그인 사용자 정보 없음 → 검색 로그 저장 안함");
         return false;
       }
 
@@ -214,15 +217,16 @@ const Search = () => {
     setShowSuggestPanel(false);
     setQuery(trimmed);
     setHasMore(true);
+    setPage(0);
 
     if (!trimmed) {
-      await loadContents({ keyword: "", isFirst: true });
+      await loadContents({ keyword: "", currentPage: 0, isFirst: true });
       return;
     }
 
     saveHistory(trimmed);
     await saveSearchLogToServer(trimmed);
-    await loadContents({ keyword: trimmed, isFirst: true });
+    await loadContents({ keyword: trimmed, currentPage: 0, isFirst: true });
   };
 
   const handleSubmit = (e) => {
@@ -245,12 +249,16 @@ const Search = () => {
     setQuery("");
     setShowSuggestPanel(false);
     setHasMore(true);
-    await loadContents({ keyword: "", isFirst: true });
+    setPage(0);
+    await loadContents({ keyword: "", currentPage: 0, isFirst: true });
   };
 
   const handleLoadMore = async () => {
     if (loading || !hasMore) return;
-    await loadContents({ keyword: query, isFirst: false });
+
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await loadContents({ keyword: query, currentPage: nextPage, isFirst: false });
   };
 
   const handleAutoCompleteClick = async (keyword) => {
@@ -293,10 +301,7 @@ const Search = () => {
     const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
 
-    if (!userId || !postId) {
-      console.error("좋아요 처리 실패: userId 또는 contentId 없음");
-      return;
-    }
+    if (!userId || !postId) return;
 
     const current = getLikeInfo(postId, Number(post.LIKES) || 0);
 
@@ -337,10 +342,7 @@ const Search = () => {
     const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
 
-    if (!userId || !postId) {
-      console.error("북마크 처리 실패: userId 또는 contentId 없음");
-      return;
-    }
+    if (!userId || !postId) return;
 
     const saved = isSaved(postId);
 
@@ -376,30 +378,22 @@ const Search = () => {
     }
   };
 
-  const personalizedKeywords = useMemo(() => {
-    const source = [...history, ...defaultAiKeywords];
-    const unique = [...new Set(source)].filter(Boolean);
-    return unique
-      .map((keyword, index) => ({
-        id: `${keyword}-${index}`,
-        label: keyword,
-        reason: index < Math.max(1, Math.ceil(history.length * 0.6)) ? "최근 검색 기반" : "AI 추천",
-      }))
-      .slice(0, 8);
-  }, [history]);
-
   useEffect(() => {
     const trimmed = query.trim();
+    const userId = getLoginUserId();
+
     if (!trimmed) {
       setAutoCompleteSuggestions([]);
       return;
     }
 
-    const userId = getLoginUserId();
-    if (!userId) return;
+    const baseUrl = userId
+      ? `http://localhost:3002/search-content/${userId}`
+      : "http://localhost:3002/search-content";
 
-    const url = new URL(`http://localhost:3002/search-content/${userId}`);
+    const url = new URL(baseUrl);
     url.searchParams.set("limit", 8);
+    url.searchParams.set("offset", 0);
     url.searchParams.set("keyword", trimmed);
 
     fetch(url.toString())
@@ -467,23 +461,10 @@ const Search = () => {
     fetchInteractionStates();
   }, [filteredContents]);
 
-  const suggestionHistory = history.slice(0, 6);
-  const suggestionAi = personalizedKeywords.slice(0, 4);
+  const suggestionHistory = history.slice(0, 10);
 
   return (
     <div className="tf-search-page">
-      <section className="tf-search-hero">
-        <div className="tf-search-badge">
-          <Sparkles size={14} />
-          SEARCH DISCOVERY
-        </div>
-        <h2>검색 기록과 추천 검색어로 더 빠르게 밈을 찾을 수 있어요</h2>
-        <p>
-          검색창을 누르면 최근 검색 6, AI 추천 4 비율로 먼저 보여주고,
-          아래에는 랜덤한 밈 썸네일이 보이도록 구성한 탐색형 검색 화면입니다.
-        </p>
-      </section>
-
       <section className="tf-search-area" ref={searchAreaRef}>
         <form className="tf-search-bar-wrap" onSubmit={handleSubmit}>
           <div
@@ -535,8 +516,8 @@ const Search = () => {
               </div>
             )}
 
-            <div className="tf-suggest-grid">
-              <section className="tf-suggest-section history-block">
+            <div className="tf-suggest-grid single-column">
+              <section className="tf-suggest-section history-block full-width">
                 <div className="tf-suggest-head">
                   <div className="tf-suggest-title-wrap">
                     <History size={16} />
@@ -554,7 +535,7 @@ const Search = () => {
                 </div>
 
                 {suggestionHistory.length > 0 ? (
-                  <div className="tf-history-list">
+                  <div className="tf-history-list full-width-list">
                     {suggestionHistory.map((item) => (
                       <div className="tf-history-item" key={item}>
                         <button
@@ -577,29 +558,6 @@ const Search = () => {
                 ) : (
                   <p className="tf-empty-text">아직 검색 기록이 없어요.</p>
                 )}
-              </section>
-
-              <section className="tf-suggest-section ai-block">
-                <div className="tf-suggest-head">
-                  <div className="tf-suggest-title-wrap">
-                    <WandSparkles size={16} />
-                    <h3>AI 추천 검색어</h3>
-                  </div>
-                </div>
-
-                <div className="tf-ai-list">
-                  {suggestionAi.map((item) => (
-                    <button
-                      type="button"
-                      className="tf-ai-item"
-                      key={item.id}
-                      onClick={() => handleSearch(item.label)}
-                    >
-                      <span className="tf-ai-keyword">{item.label}</span>
-                      <span className="tf-ai-reason">{item.reason}</span>
-                    </button>
-                  ))}
-                </div>
               </section>
             </div>
           </div>
@@ -640,12 +598,19 @@ const Search = () => {
                     allowFullScreen
                   />
                 ) : item.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
-                  <iframe
-                    src={item.FILE_PATH}
-                    className="tf-search-card-video tiktok-card-frame"
-                    title={item.TITLE || "tiktok card"}
-                    allowFullScreen
-                  />
+                  getTikTokEmbedUrl(item.ORIGINAL_LINK || item.ORIGINAL_URL || item.FILE_PATH) ? (
+                    <iframe
+                      src={getTikTokEmbedUrl(item.ORIGINAL_LINK || item.ORIGINAL_URL || item.FILE_PATH)}
+                      className="tf-search-card-video tiktok-card-frame"
+                      title={item.TITLE || "tiktok card"}
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className="tf-search-card-video tf-search-card-empty">
+                      틱톡 주소 없음
+                    </div>
+                  )
                 ) : (
                   <video
                     src={getVideoUrl(item.FILE_PATH)}
@@ -676,7 +641,7 @@ const Search = () => {
                       e.stopPropagation();
                       toggleLike(item);
                     }}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: getLoginUserId() ? "pointer" : "default" }}
                   >
                     <Heart size={13} fill={likeInfo.liked ? "currentColor" : "none"} />
                     {likeInfo.count}
@@ -688,7 +653,7 @@ const Search = () => {
                       e.stopPropagation();
                       toggleSave(item);
                     }}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: getLoginUserId() ? "pointer" : "default" }}
                   >
                     <Bookmark size={13} fill={saved ? "currentColor" : "none"} />
                     {saved ? "저장" : "보관"}
@@ -726,13 +691,12 @@ const Search = () => {
             </button>
 
             <div
-              className={`tf-video-modal-player-wrap ${
-                selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
-                  ? "instagram-modal"
-                  : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
+              className={`tf-video-modal-player-wrap ${selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram"
+                ? "instagram-modal"
+                : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok"
                   ? "tiktok-modal"
                   : ""
-              }`}
+                }`}
             >
               {selectedVideo.PLATFORM_TYPE?.toLowerCase() === "instagram" ? (
                 <iframe
@@ -744,12 +708,23 @@ const Search = () => {
                   allowFullScreen
                 />
               ) : selectedVideo.PLATFORM_TYPE?.toLowerCase() === "tiktok" ? (
-                <iframe
-                  src={selectedVideo.FILE_PATH}
-                  className="tf-video-modal-video tiktok-modal-frame"
-                  title="tiktok modal"
-                  allowFullScreen
-                />
+                getTikTokEmbedUrl(
+                  selectedVideo.ORIGINAL_LINK || selectedVideo.ORIGINAL_URL || selectedVideo.FILE_PATH
+                ) ? (
+                  <iframe
+                    src={getTikTokEmbedUrl(
+                      selectedVideo.ORIGINAL_LINK || selectedVideo.ORIGINAL_URL || selectedVideo.FILE_PATH
+                    )}
+                    className="tf-video-modal-video tiktok-modal-frame"
+                    title="tiktok modal"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="tf-video-modal-video tf-search-card-empty">
+                    틱톡 주소 없음
+                  </div>
+                )
               ) : (
                 <video
                   src={getVideoUrl(selectedVideo.FILE_PATH)}
@@ -765,11 +740,10 @@ const Search = () => {
               <div className="tf-video-modal-floating">
                 <button
                   type="button"
-                  className={`tf-floating-btn ${
-                    getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked
-                      ? "liked"
-                      : ""
-                  }`}
+                  className={`tf-floating-btn ${getLikeInfo(selectedVideo.CONTENT_ID, Number(selectedVideo.LIKES) || 0).liked
+                    ? "liked"
+                    : ""
+                    }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleLike(selectedVideo);
@@ -834,17 +808,6 @@ const Search = () => {
                   원본 보러가기
                 </a>
               )}
-
-              <div className="tf-video-modal-meta-line">
-                <span className="tf-modal-chip">
-                  <Play size={13} />
-                  밈 미리보기
-                </span>
-                <span className="tf-modal-chip">
-                  <Sparkles size={13} />
-                  추천 탐색
-                </span>
-              </div>
             </div>
           </div>
         </div>

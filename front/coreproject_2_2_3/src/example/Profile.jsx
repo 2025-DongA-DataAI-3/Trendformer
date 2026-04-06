@@ -332,6 +332,31 @@ const Profile = () => {
     localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(updatedSavedPosts));
   };
 
+  const getTikTokEmbedUrl = (url) => {
+    if (!url) return "";
+
+    const cleanUrl = String(url).trim();
+    const match = cleanUrl.match(/\/video\/(\d+)/);
+
+    if (!match) return "";
+
+    const videoId = match[1];
+    return `https://www.tiktok.com/embed/v3/${videoId}`;
+  };
+
+  const isPlayableVideoUrl = (url) => {
+    if (!url) return false;
+
+    const cleanUrl = String(url).toLowerCase();
+
+    if (cleanUrl.includes(".mp4")) return true;
+    if (cleanUrl.includes("mime=video%2fmp4")) return true;
+    if (cleanUrl.includes("mime=video/mp4")) return true;
+    if (cleanUrl.includes("googlevideo.com/videoplayback")) return true;
+
+    return false;
+  };
+
   const openDetailModal = (item) => setSelectedItem(item);
   const closeDetailModal = () => setSelectedItem(null);
 
@@ -371,10 +396,7 @@ const Profile = () => {
                 <span style={styles.userInfoLabel}>이메일</span>
                 <span style={styles.userInfoValue}>{user.email || "-"}</span>
               </div>
-              <div style={styles.userInfoItem}>
-                <span style={styles.userInfoLabel}>가입 상태</span>
-                <span style={styles.userInfoValue}>로그인 완료</span>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -431,7 +453,21 @@ const Profile = () => {
               <article key={item.id} style={styles.card}>
                 <button type="button" style={styles.cardMediaButton} onClick={() => openDetailModal(item)}>
                   {item.isVideo ? (
-                    <video src={item.filePath || item.img} style={styles.cardImage} muted playsInline preload="metadata" />
+                    item.originalUrl?.includes("tiktok") ? (
+                      <iframe
+                        src={getTikTokEmbedUrl(item.originalUrl)}
+                        style={styles.cardImage}
+                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        src={item.filePath || item.img}
+                        style={styles.cardImage}
+                        muted
+                        playsInline
+                      />
+                    )
                   ) : (
                     <img src={item.img} alt={item.title} style={styles.cardImage} />
                   )}
@@ -570,7 +606,32 @@ const Profile = () => {
             <button type="button" style={styles.modalCloseFloatingBtn} onClick={closeDetailModal}><X size={20} /></button>
             <div style={styles.detailMediaWrap}>
               {selectedItem.isVideo ? (
-                <video src={selectedItem.filePath || selectedItem.img} style={styles.detailMedia} controls autoPlay playsInline />
+                selectedItem.originalUrl?.includes("tiktok") ? (
+                  getTikTokEmbedUrl(selectedItem.originalUrl) ? (
+                    <iframe
+                      src={getTikTokEmbedUrl(selectedItem.originalUrl)}
+                      style={styles.detailMedia}
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div style={{ ...styles.detailMedia, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      틱톡 영상 없음
+                    </div>
+                  )
+                ) : isPlayableVideoUrl(selectedItem.filePath || selectedItem.img) ? (
+                  <video
+                    src={selectedItem.filePath || selectedItem.img}
+                    style={styles.detailMedia}
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <div style={{ ...styles.detailMedia, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    영상 주소가 없습니다.
+                  </div>
+                )
               ) : (
                 <img src={selectedItem.img} alt={selectedItem.title} style={styles.detailMedia} />
               )}

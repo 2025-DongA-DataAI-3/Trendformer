@@ -1,18 +1,20 @@
+import os
 import yt_dlp
 
+COOKIE_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
 
-# =========================================================
-# 10. MP4 URL 추출
-# =========================================================
+
 def get_mp4(url):
     try:
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
-            "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
+            "format": "best",
             "noplaylist": True,
-            "cookiesfrombrowser": ("chrome",)
         }
+
+        if os.path.exists(COOKIE_PATH):
+            ydl_opts["cookiefile"] = COOKIE_PATH
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -22,16 +24,12 @@ def get_mp4(url):
 
             requested_formats = info.get("requested_formats", [])
             for f in requested_formats:
-                if f.get("ext") == "mp4" and f.get("url"):
+                if f.get("url"):
                     return f["url"]
 
             formats = info.get("formats", [])
             for f in reversed(formats):
-                if (
-                    f.get("ext") == "mp4"
-                    and f.get("url")
-                    and f.get("vcodec") != "none"
-                ):
+                if f.get("url") and f.get("vcodec") != "none":
                     return f["url"]
 
             return None

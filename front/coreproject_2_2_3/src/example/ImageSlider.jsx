@@ -1,53 +1,374 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Heart,
   Bookmark,
   ChevronUp,
   ChevronDown,
   Sparkles,
-  Play,
 } from "lucide-react";
 import "./ImageSlider.css";
 import { useLocation } from "react-router-dom";
 
 const LIKE_STORAGE_KEY = "postLikes";
 const SAVED_POSTS_KEY = "savedPosts";
+const MEDIA_WINDOW = 1; // 현재 기준 앞뒤 1개만 실제 미디어 렌더링
+
+const getLoginUserId = () => {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    return storedUser?.USER_ID || storedUser?.id || null;
+  } catch {
+    return null;
+  }
+};
+
+const getVideoUrl = (filePath) => {
+  if (!filePath || !String(filePath).trim()) return null;
+
+  const cleanPath = String(filePath).trim();
+
+  if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+    return cleanPath;
+  }
+
+  if (cleanPath.startsWith("/")) {
+    return `http://localhost:3002${cleanPath}`;
+  }
+
+  return `http://localhost:3002/uploads/${cleanPath}`;
+};
+
+const isPlayableVideoUrl = (url) => {
+  if (!url) return false;
+
+  const cleanUrl = String(url).toLowerCase();
+
+  if (cleanUrl.includes(".mp4")) return true;
+  if (cleanUrl.includes("mime=video%2fmp4")) return true;
+  if (cleanUrl.includes("mime=video/mp4")) return true;
+  if (cleanUrl.includes("googlevideo.com/videoplayback")) return true;
+
+  return false;
+};
+
+const getInstagramEmbedUrl = (url) => {
+  if (!url) return "";
+  const cleanUrl = url.trim();
+  if (cleanUrl.includes("/embed")) return cleanUrl;
+  const noQuery = cleanUrl.split("?")[0];
+  const normalized = noQuery.endsWith("/") ? noQuery : `${noQuery}/`;
+  return `${normalized}embed`;
+};
+
+const getTikTokPlayerUrl = (url) => {
+  if (!url) return "";
+  const cleanUrl = url.trim();
+  const match = cleanUrl.match(/\/video\/(\d+)/);
+  if (!match) return "";
+  const videoId = match[1];
+  return `https://www.tiktok.com/player/v1/${videoId}?controls=1&description=0&music_info=0&autoplay=1&loop=1`;
+};
+
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return "";
+
+  const cleanUrl = String(url).trim();
+
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = cleanUrl.match(pattern);
+    if (match?.[1]) {
+      const videoId = match[1];
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${videoId}&controls=1&rel=0`;
+    }
+  }
+
+  return "";
+};
+
+const postTikTokCommand = (iframeEl, type, value) => {
+  if (!iframeEl?.contentWindow) return;
+  iframeEl.contentWindow.postMessage(
+    { "x-tiktok-player": true, type, value },
+    "*"
+  );
+};
+
+const makeTag = (value) => {
+  if (!value) return null;
+  return `#${String(value).replace(/\s+/g, "")}`;
+};
+
+const SlideItem = ({
+  item,
+  slideIndex,
+  activeIndex,
+  likeInfo,
+  saved,
+  expandedPost,
+  toggleExpanded,
+  toggleLike,
+  toggleSave,
+  goPrev,
+  goNext,
+  total,
+  videoRefs,
+  tikTokRefs,
+  progress,
+  onVideoTimeUpdate,
+  onVideoLoadedMetadata,
+}) => {
+  const isActive = slideIndex === activeIndex;
+  const shouldRenderMedia = Math.abs(slideIndex - activeIndex) <= MEDIA_WINDOW;
+
+  const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok";
+  const isInstagram = item.PLATFORM_TYPE?.toLowerCase() === "instagram";
+  const isYoutube = item.PLATFORM_TYPE?.toLowerCase() === "youtube";
+
+  const videoUrl = getVideoUrl(item.FILE_PATH);
+  const instagramEmbedUrl = getInstagramEmbedUrl(
+    item.ORIGINAL_LINK || item.FILE_PATH || ""
+  );
+  const tikTokPlayerUrl = getTikTokPlayerUrl(item.ORIGINAL_LINK || "");
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(
+    item.ORIGINAL_LINK || item.FILE_PATH || ""
+  );
+
+  const keywordTag = makeTag(item.KEYWORD_NAME);
+  const platformTag = makeTag(item.PLATFORM_TYPE || "trend");
+
+  return (
+    <div className="slide">
+      <div className="video-frame">
+        {!shouldRenderMedia ? (
+          <div className="content-video" />
+        ) : isTikTok ? (
+          tikTokPlayerUrl ? (
+            <div className="embed-crop tiktok-crop">
+              <iframe
+                ref={(el) => {
+                  if (el) tikTokRefs.current[item.CONTENT_ID] = el;
+                  else delete tikTokRefs.current[item.CONTENT_ID];
+                }}
+                src={tikTokPlayerUrl}
+                title={item.TITLE || "tiktok embed"}
+                className="embed-frame tiktok-frame"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="content-video">틱톡 주소가 없습니다.</div>
+          )
+        ) : isInstagram ? (
+          instagramEmbedUrl ? (
+            <div className="embed-crop instagram-crop">
+              <iframe
+                src={instagramEmbedUrl}
+                title={item.TITLE || "instagram embed"}
+                className="embed-frame instagram-frame"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="content-video">인스타그램 주소가 없습니다.</div>
+          )
+        ) : isYoutube ? (
+          videoUrl && isPlayableVideoUrl(videoUrl) ? (
+            <video
+              ref={(el) => {
+                if (el) videoRefs.current[item.CONTENT_ID] = el;
+                else delete videoRefs.current[item.CONTENT_ID];
+              }}
+              className="content-video"
+              src={videoUrl}
+              muted
+              loop
+              playsInline
+              preload={isActive ? "auto" : "metadata"}
+              controls={false}
+              onTimeUpdate={() => onVideoTimeUpdate(item.CONTENT_ID)}
+              onLoadedMetadata={() => onVideoLoadedMetadata(item.CONTENT_ID)}
+            />
+          ) : youtubeEmbedUrl ? (
+            <div className="embed-crop youtube-crop">
+              <iframe
+                src={youtubeEmbedUrl}
+                title={item.TITLE || "youtube embed"}
+                className="embed-frame youtube-frame"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="content-video">유튜브 주소가 없습니다.</div>
+          )
+        ) : videoUrl && isPlayableVideoUrl(videoUrl) ? (
+          <video
+            ref={(el) => {
+              if (el) videoRefs.current[item.CONTENT_ID] = el;
+              else delete videoRefs.current[item.CONTENT_ID];
+            }}
+            className="content-video"
+            src={videoUrl}
+            muted
+            loop
+            playsInline
+            preload={isActive ? "auto" : "metadata"}
+            controls={false}
+            onTimeUpdate={() => onVideoTimeUpdate(item.CONTENT_ID)}
+            onLoadedMetadata={() => onVideoLoadedMetadata(item.CONTENT_ID)}
+          />
+        ) : (
+          <div className="content-video">영상 주소가 없습니다.</div>
+        )}
+
+        <div className="video-progress">
+          <div
+            className="video-progress-fill"
+            style={{ width: `${progress || 0}%` }}
+          />
+        </div>
+
+        <div className="video-gradient" />
+
+        <div className="video-overlay">
+          <div className="video-meta-line">
+            <span className="video-category">{item.PLATFORM_TYPE || "Meme"}</span>
+            <span className="video-user">@{item.CREATOR_NAME || item.USER_ID || "unknown"}</span>
+          </div>
+
+          <h4
+            className={`video-title ${
+              expandedPost === item.CONTENT_ID ? "expanded" : "collapsed"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpanded(item.CONTENT_ID);
+            }}
+          >
+            {item.TITLE || "지금 뜨는 밈 콘텐츠"}
+          </h4>
+
+          {expandedPost === item.CONTENT_ID && item.ORIGINAL_LINK && (
+            <a
+              href={item.ORIGINAL_LINK}
+              target="_blank"
+              rel="noreferrer"
+              className="origin-link"
+              onClick={(e) => e.stopPropagation()}
+            >
+              원본 보러가기
+            </a>
+          )}
+
+          <div className="video-tags">
+            {platformTag && <span>{platformTag}</span>}
+            <span>#shorts</span>
+            {keywordTag ? <span>{keywordTag}</span> : <span>#meme</span>}
+          </div>
+        </div>
+
+        <div className="video-actions">
+          <button
+            type="button"
+            className={`action-btn ${likeInfo.liked ? "liked" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleLike(item);
+            }}
+          >
+            <Heart size={20} fill={likeInfo.liked ? "currentColor" : "none"} />
+            <span>{likeInfo.count}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`action-btn ${saved ? "saved" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSave(item);
+            }}
+          >
+            <Bookmark size={20} fill={saved ? "currentColor" : "none"} />
+            <span>{saved ? "저장됨" : "저장"}</span>
+          </button>
+        </div>
+
+        <div className="viewer-nav-hint">
+          <button
+            type="button"
+            className="hint-btn"
+            onClick={goPrev}
+            disabled={slideIndex === 0}
+          >
+            <ChevronUp size={16} />
+          </button>
+          <span className="hint-count">
+            {slideIndex + 1} / {total}
+          </span>
+          <button
+            type="button"
+            className="hint-btn"
+            onClick={goNext}
+            disabled={slideIndex === total - 1}
+          >
+            <ChevronDown size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MemoSlideItem = React.memo(SlideItem);
 
 const ImageSlider = () => {
   const location = useLocation();
+
   const [index, setIndex] = useState(0);
   const [contents, setContents] = useState([]);
   const [likeState, setLikeState] = useState({});
   const [savedPosts, setSavedPosts] = useState([]);
-  const touchStartY = useRef(0);
-  const videoRefs = useRef({});
-  const wheelLock = useRef(false);
-  const tikTokRefs = useRef({});
-  const [isPlaying, setIsPlaying] = useState({});
   const [expandedPost, setExpandedPost] = useState(null);
   const [progressMap, setProgressMap] = useState({});
 
-  const getLoginUserId = () => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    return storedUser?.USER_ID || storedUser?.id || null;
-  };
+  const touchStartY = useRef(0);
+  const wheelLock = useRef(false);
+  const videoRefs = useRef({});
+  const tikTokRefs = useRef({});
 
-  const handleTimeUpdate = (contentId) => {
+  const goNext = useCallback(() => {
+    setIndex((prev) => Math.min(prev + 1, contents.length - 1));
+  }, [contents.length]);
+
+  const goPrev = useCallback(() => {
+    setIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const toggleExpanded = useCallback((postId) => {
+    setExpandedPost((prev) => (prev === postId ? null : postId));
+  }, []);
+
+  const handleVideoTimeUpdate = useCallback((contentId) => {
     const video = videoRefs.current[contentId];
     if (!video || !video.duration) return;
+
     const progress = (video.currentTime / video.duration) * 100;
     setProgressMap((prev) => ({ ...prev, [contentId]: progress }));
-  };
+  }, []);
 
-  const handleLoadedMetadata = (contentId) => {
+  const handleVideoLoadedMetadata = useCallback((contentId) => {
     setProgressMap((prev) => ({ ...prev, [contentId]: 0 }));
-  };
+  }, []);
 
-  const toggleExpanded = (postId) => {
-    setExpandedPost((prev) => (prev === postId ? null : postId));
-  };
-
-  // 로컬스토리지 초기화
   useEffect(() => {
     const storedLikes = JSON.parse(localStorage.getItem(LIKE_STORAGE_KEY)) || {};
     const storedSavedPosts = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
@@ -55,107 +376,136 @@ const ImageSlider = () => {
     setSavedPosts(storedSavedPosts);
   }, []);
 
-  // 페이지 이동 시 index 초기화
   useEffect(() => {
     if (location.state?.reset) {
       setIndex(0);
     }
   }, [location]);
 
-  // 콘텐츠 fetch (userId 기반)
   useEffect(() => {
-    const userId = getLoginUserId();
-    if (!userId) {
-      console.error("로그인한 사용자 정보가 없습니다.");
-      return;
-    }
+    let isMounted = true;
 
-    fetch(`http://localhost:3002/content/${userId}`)
-      .then((res) => {
+    const fetchContents = async () => {
+      try {
+        const res = await fetch("http://localhost:3002/content/top100");
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        const safeData = Array.isArray(data) ? data : [];
-        setContents(safeData);
-      })
-      .catch((err) => {
-        console.error("콘텐츠 불러오기 실패:", err);
-      });
-  }, []);
 
-  const goNext = () => setIndex((prev) => Math.min(prev + 1, contents.length - 1));
-  const goPrev = () => setIndex((prev) => Math.max(prev - 1, 0));
+        const data = await res.json();
+        const safeData = Array.isArray(data) ? data : [];
+
+        const uniqueData = Array.from(
+          new Map(safeData.map((item) => [item.CONTENT_ID, item])).values()
+        );
+
+        if (isMounted) {
+          setContents(uniqueData);
+          setIndex(0);
+        }
+      } catch (err) {
+        console.error("AI 랭킹 콘텐츠 불러오기 실패:", err);
+      }
+    };
+
+    fetchContents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "ArrowDown") goNext();
       if (e.key === "ArrowUp") goPrev();
     };
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [contents.length]);
+  }, [goNext, goPrev]);
 
-  const getVideoUrl = (filePath) => {
-    if (!filePath) return "";
-    if (filePath.startsWith("http://") || filePath.startsWith("https://")) return filePath;
-    if (filePath.startsWith("/")) return `http://localhost:3002${filePath}`;
-    return `http://localhost:3002/uploads/${filePath}`;
-  };
+  useEffect(() => {
+    const active = contents[index];
+    if (!active) return;
 
-  const getInstagramEmbedUrl = (url) => {
-    if (!url) return "";
-    const cleanUrl = url.trim();
-    if (cleanUrl.includes("/embed")) return cleanUrl;
-    const noQuery = cleanUrl.split("?")[0];
-    const normalized = noQuery.endsWith("/") ? noQuery : `${noQuery}/`;
-    return `${normalized}embed`;
-  };
+    const platform = active.PLATFORM_TYPE?.toLowerCase();
 
-  // 틱톡 Player API URL 생성
-  const getTikTokPlayerUrl = (url) => {
-    if (!url) return "";
-    const cleanUrl = url.trim();
-    const match = cleanUrl.match(/\/video\/(\d+)/);
-    if (!match) return "";
-    const videoId = match[1];
-    return `https://www.tiktok.com/player/v1/${videoId}?controls=1&description=0&music_info=0&autoplay=0&loop=1`;
-  };
+    Object.entries(videoRefs.current).forEach(([id, video]) => {
+      if (!video) return;
 
-  // 틱톡 postMessage 제어
-  const postTikTokCommand = (iframeEl, type, value) => {
-    if (!iframeEl?.contentWindow) return;
-    iframeEl.contentWindow.postMessage(
-      { "x-tiktok-player": true, type, value },
-      "*"
-    );
-  };
+      if (Number(id) !== Number(active.CONTENT_ID)) {
+        try {
+          video.pause();
+          video.currentTime = 0;
+        } catch (e) {
+          console.log("비활성 영상 정지 실패:", e);
+        }
+      }
+    });
 
-  const getLikeInfo = (postId, baseLikes = 0) => {
+    Object.entries(tikTokRefs.current).forEach(([id, iframe]) => {
+      if (!iframe) return;
+
+      if (Number(id) !== Number(active.CONTENT_ID)) {
+        postTikTokCommand(iframe, "pause");
+        postTikTokCommand(iframe, "seek", 0);
+      }
+    });
+
+    if (platform === "instagram") return;
+
+    if (platform === "tiktok") {
+      const activeTikTok = tikTokRefs.current[active.CONTENT_ID];
+      if (activeTikTok) {
+        postTikTokCommand(activeTikTok, "seek", 0);
+        postTikTokCommand(activeTikTok, "play");
+      }
+      return;
+    }
+
+    const activeVideo = videoRefs.current[active.CONTENT_ID];
+    if (!activeVideo) return;
+
+    activeVideo.muted = true;
+    activeVideo.playsInline = true;
+
+    const playPromise = activeVideo.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise.catch((err) => {
+        console.log("자동재생 실패:", err);
+      });
+    }
+  }, [index, contents]);
+
+  const getLikeInfo = useCallback((postId, baseLikes = 0) => {
     const saved = likeState[postId];
     if (!saved) return { count: Number(baseLikes) || 0, liked: false };
     return saved;
-  };
+  }, [likeState]);
 
-  const isSaved = (postId) => savedPosts.some((item) => item.id === postId);
+  const isSaved = useCallback(
+    (postId) => savedPosts.some((item) => item.id === postId),
+    [savedPosts]
+  );
 
-  const createSavedPost = (post, nextCount) => ({
+  const createSavedPost = useCallback((post, nextCount) => ({
     id: post.CONTENT_ID,
     img: getVideoUrl(post.FILE_PATH),
     category: post.PLATFORM_TYPE || "Meme",
     title: post.TITLE || "제목 없음",
     desc: `${post.USER_ID || "unknown"}님의 게시물`,
-    tags: post.PLATFORM_TYPE ? [`#${post.PLATFORM_TYPE}`] : ["#meme"],
+    tags: post.KEYWORD_NAME
+      ? [`#${post.PLATFORM_TYPE}`, `#${String(post.KEYWORD_NAME).replace(/\s+/g, "")}`]
+      : [`#${post.PLATFORM_TYPE || "meme"}`],
     saves: nextCount,
     userId: post.USER_ID || "unknown",
     nickname: post.USER_ID || "unknown",
     date: post.CREATED_AT || "",
     filePath: getVideoUrl(post.FILE_PATH),
-    originalUrl: post.ORIGINAL_URL || post.ORIGINAL_LINK || "",
+    originalUrl: post.ORIGINAL_LINK || "",
     isVideo: true,
-  });
+  }), []);
 
-  const toggleLike = async (post) => {
+  const toggleLike = useCallback(async (post) => {
     const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
 
@@ -164,7 +514,7 @@ const ImageSlider = () => {
       return;
     }
 
-    const current = getLikeInfo(postId, Number(post.LIKES) || 0);
+    const current = getLikeInfo(postId, 0);
 
     try {
       const res = await fetch("http://localhost:3002/interaction/like", {
@@ -191,15 +541,17 @@ const ImageSlider = () => {
           : current.count + 1,
       };
 
-      const updatedLikes = { ...likeState, [postId]: next };
-      setLikeState(updatedLikes);
-      localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
+      setLikeState((prev) => {
+        const updatedLikes = { ...prev, [postId]: next };
+        localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedLikes));
+        return updatedLikes;
+      });
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
     }
-  };
+  }, [getLikeInfo]);
 
-  const toggleSave = async (post) => {
+  const toggleSave = useCallback(async (post) => {
     const userId = getLoginUserId();
     const postId = post.CONTENT_ID;
 
@@ -228,19 +580,32 @@ const ImageSlider = () => {
         throw new Error(data.message || "북마크 처리 실패");
       }
 
-      const currentSaved = JSON.parse(localStorage.getItem(SAVED_POSTS_KEY)) || [];
-      const likeInfo = getLikeInfo(postId, Number(post.LIKES) || 0);
+      setSavedPosts((prev) => {
+        const likeInfo = getLikeInfo(postId, 0);
 
-      const nextSaved = saved
-        ? currentSaved.filter((item) => item.id !== postId)
-        : [createSavedPost(post, likeInfo.count), ...currentSaved.filter((item) => item.id !== postId)];
+        const nextSaved = saved
+          ? prev.filter((item) => item.id !== postId)
+          : [
+              createSavedPost(post, likeInfo.count),
+              ...prev.filter((item) => item.id !== postId),
+            ];
 
-      setSavedPosts(nextSaved);
-      localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+        localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(nextSaved));
+        return nextSaved;
+      });
     } catch (error) {
       console.error("보관 처리 실패:", error);
     }
-  };
+  }, [createSavedPost, getLikeInfo, isSaved]);
+
+  const slideItems = useMemo(
+    () =>
+      contents.map((item, realIndex) => ({
+        item,
+        realIndex,
+      })),
+    [contents]
+  );
 
   const handleTouchStart = (e) => {
     touchStartY.current = e.changedTouches[0].clientY;
@@ -249,139 +614,12 @@ const ImageSlider = () => {
   const handleTouchEnd = (e) => {
     const endY = e.changedTouches[0].clientY;
     const diff = touchStartY.current - endY;
+
     if (Math.abs(diff) < 40) return;
+
     if (diff > 0) goNext();
     else goPrev();
   };
-
-  // 틱톡 play/pause 제어
-  const togglePlayPause = (contentId, platform) => {
-    if (platform === "tiktok") {
-      const iframe = tikTokRefs.current[contentId];
-      if (!iframe) return;
-      const currentlyPlaying = !!isPlaying[contentId];
-      if (currentlyPlaying) {
-        postTikTokCommand(iframe, "pause");
-        setIsPlaying((prev) => ({ ...prev, [contentId]: false }));
-      } else {
-        postTikTokCommand(iframe, "play");
-        setIsPlaying((prev) => ({ ...prev, [contentId]: true }));
-      }
-      return;
-    }
-    const video = videoRefs.current[contentId];
-    if (!video) return;
-    if (video.paused) {
-      video.play();
-      setIsPlaying((prev) => ({ ...prev, [contentId]: true }));
-    } else {
-      video.pause();
-      setIsPlaying((prev) => ({ ...prev, [contentId]: false }));
-    }
-  };
-
-  // 슬라이드 전환 시 재생 제어
-  useEffect(() => {
-    const active = contents[index];
-    if (!active) return;
-
-    const platform = active.PLATFORM_TYPE?.toLowerCase();
-    const isTikTok = platform === "tiktok";
-    const isInstagram = platform === "instagram";
-
-    Object.entries(videoRefs.current).forEach(([id, video]) => {
-      if (!video) return;
-      if (Number(id) !== Number(active.CONTENT_ID)) {
-        video.pause();
-        video.currentTime = 0;
-      }
-    });
-
-    Object.entries(tikTokRefs.current).forEach(([id, iframe]) => {
-      if (!iframe) return;
-      if (Number(id) !== Number(active.CONTENT_ID)) {
-        postTikTokCommand(iframe, "pause");
-        postTikTokCommand(iframe, "seek", 0);
-      }
-    });
-
-    if (isTikTok) {
-      const activeTikTok = tikTokRefs.current[active.CONTENT_ID];
-      if (activeTikTok) {
-        postTikTokCommand(activeTikTok, "seek", 0);
-        postTikTokCommand(activeTikTok, "play");
-        setIsPlaying({ [active.CONTENT_ID]: true });
-      }
-      return;
-    }
-
-    if (isInstagram) return;
-
-    const activeVideo = videoRefs.current[active.CONTENT_ID];
-    if (!activeVideo) return;
-
-    activeVideo.muted = true;
-    activeVideo.play()
-      .then(() => setIsPlaying({ [active.CONTENT_ID]: true }))
-      .catch((err) => console.log("자동재생 실패:", err));
-  }, [index, contents]);
-
-  useEffect(() => {
-    const fetchInteractionStates = async () => {
-      const userId = getLoginUserId();
-      if (!userId || contents.length === 0) return;
-
-      try {
-        const likeMap = {};
-        const savedList = [];
-
-        for (const item of contents) {
-          const contentId = item.CONTENT_ID;
-          if (!contentId) continue;
-
-          const [likeRes, bookmarkRes] = await Promise.all([
-            fetch(
-              `http://localhost:3002/interaction/like-status?user_id=${encodeURIComponent(
-                userId
-              )}&content_id=${encodeURIComponent(contentId)}`
-            ),
-            fetch(
-              `http://localhost:3002/interaction/bookmark-status?user_id=${encodeURIComponent(
-                userId
-              )}&content_id=${encodeURIComponent(contentId)}`
-            ),
-          ]);
-
-          const likeData = await likeRes.json();
-          const bookmarkData = await bookmarkRes.json();
-
-          likeMap[contentId] = {
-            liked: likeData.success ? likeData.liked : false,
-            count: Number(item.LIKES) || 0,
-          };
-
-          if (bookmarkData.success && bookmarkData.bookmarked) {
-            savedList.push(createSavedPost(item, Number(item.LIKES) || 0));
-          }
-        }
-
-        setLikeState((prev) => {
-          const merged = { ...prev, ...likeMap };
-          localStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(merged));
-          return merged;
-        });
-
-        setSavedPosts(savedList);
-        localStorage.setItem(SAVED_POSTS_KEY, JSON.stringify(savedList));
-      } catch (error) {
-        console.error("좋아요/북마크 상태 조회 실패:", error);
-      }
-    };
-
-    fetchInteractionStates();
-  }, [contents]);
-
-  const activeItem = useMemo(() => contents[index] || null, [contents, index]);
 
   if (!contents.length) {
     return (
@@ -403,10 +641,15 @@ const ImageSlider = () => {
       className="viewer"
       onWheel={(e) => {
         if (wheelLock.current) return;
+
         wheelLock.current = true;
+
         if (e.deltaY > 0) goNext();
         if (e.deltaY < 0) goPrev();
-        setTimeout(() => { wheelLock.current = false; }, 350);
+
+        setTimeout(() => {
+          wheelLock.current = false;
+        }, 300);
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -415,171 +658,28 @@ const ImageSlider = () => {
         className="slider"
         style={{ transform: `translateY(-${index * 100}%)` }}
       >
-        {contents.map((item, i) => {
-          const likeInfo = getLikeInfo(item.CONTENT_ID, Number(item.LIKES) || 0);
-          const saved = isSaved(item.CONTENT_ID);
-          const shouldRenderVideo = Math.abs(i - index) <= 5;
-          const isTikTok = item.PLATFORM_TYPE?.toLowerCase() === "tiktok";
-          const isInstagram = item.PLATFORM_TYPE?.toLowerCase() === "instagram";
-          const videoUrl = getVideoUrl(item.FILE_PATH);
-          const instagramEmbedUrl = getInstagramEmbedUrl(
-            item.ORIGINAL_URL || item.ORIGINAL_LINK || item.FILE_PATH
-          );
-          const tikTokPlayerUrl = getTikTokPlayerUrl(
-            item.ORIGINAL_LINK || item.ORIGINAL_URL || ""
-          );
-
-          return (
-            <div className="slide" key={item.CONTENT_ID || i}>
-              <div className="video-frame">
-                {isTikTok ? (
-                  tikTokPlayerUrl ? (
-                    <div
-                      className="embed-crop tiktok-crop"
-                      style={{ visibility: shouldRenderVideo ? "visible" : "hidden" }}
-                    >
-                      <iframe
-                        ref={(el) => {
-                          if (el) tikTokRefs.current[item.CONTENT_ID] = el;
-                          else delete tikTokRefs.current[item.CONTENT_ID];
-                        }}
-                        src={tikTokPlayerUrl}
-                        title={item.TITLE || "tiktok embed"}
-                        className="embed-frame tiktok-frame"
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                      />
-                    </div>
-                  ) : (
-                    <div className="content-video">틱톡 주소 없음</div>
-                  )
-                ) : shouldRenderVideo ? (
-                  isInstagram ? (
-                    instagramEmbedUrl ? (
-                      <div className="embed-crop instagram-crop">
-                        <iframe
-                          src={instagramEmbedUrl}
-                          title={item.TITLE || "instagram embed"}
-                          className="embed-frame instagram-frame"
-                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : (
-                      <div className="content-video">인스타그램 주소가 없습니다.</div>
-                    )
-                  ) : videoUrl ? (
-                    <video
-                      ref={(el) => {
-                        if (el) videoRefs.current[item.CONTENT_ID] = el;
-                        else delete videoRefs.current[item.CONTENT_ID];
-                      }}
-                      className="content-video"
-                      src={videoUrl}
-                      muted
-                      autoPlay={i === index}
-                      loop
-                      playsInline
-                      controls={false}
-                      preload={i === index ? "auto" : "none"}
-                      onClick={() => togglePlayPause(item.CONTENT_ID, item.PLATFORM_TYPE?.toLowerCase())}
-                      onLoadedData={() => {
-                        if (i === index) {
-                          const video = videoRefs.current[item.CONTENT_ID];
-                          if (video) {
-                            video.muted = true;
-                            video.play().catch((err) => console.log("로드 후 재생 실패:", err));
-                          }
-                        }
-                      }}
-                      onTimeUpdate={() => handleTimeUpdate(item.CONTENT_ID)}
-                      onLoadedMetadata={() => handleLoadedMetadata(item.CONTENT_ID)}
-                    />
-                  ) : (
-                    <div className="content-video">영상 주소가 없습니다.</div>
-                  )
-                ) : (
-                  <div className="content-video" />
-                )}
-
-                <div className="video-progress">
-                  <div
-                    className="video-progress-fill"
-                    style={{ width: `${progressMap[item.CONTENT_ID] || 0}%` }}
-                  />
-                </div>
-
-                <div className="video-gradient" />
-
-                <div className="video-overlay">
-                  <div className="video-meta-line">
-                    <span className="video-category">{item.PLATFORM_TYPE || "Meme"}</span>
-                    <span className="video-user">@{item.CREATOR_NAME || "unknown"}</span>
-                  </div>
-
-                  <h4
-                    className={`video-title ${expandedPost === item.CONTENT_ID ? "expanded" : "collapsed"}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleExpanded(item.CONTENT_ID);
-                    }}
-                  >
-                    {item.TITLE || "지금 뜨는 밈 콘텐츠"}
-                  </h4>
-
-                  {expandedPost === item.CONTENT_ID &&
-                    (item.ORIGINAL_URL || item.ORIGINAL_LINK) && (
-                      <a
-                        href={item.ORIGINAL_URL || item.ORIGINAL_LINK}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="origin-link"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        원본 보러가기
-                      </a>
-                    )}
-
-                  <div className="video-tags">
-                    <span>#{item.PLATFORM_TYPE || "trend"}</span>
-                    <span>#shorts</span>
-                    <span>#meme</span>
-                  </div>
-                </div>
-
-                <div className="video-actions">
-                  <button
-                    type="button"
-                    className={`action-btn ${likeInfo.liked ? "liked" : ""}`}
-                    onClick={() => toggleLike(item)}
-                  >
-                    <Heart size={20} fill={likeInfo.liked ? "currentColor" : "none"} />
-                    <span>{likeInfo.count}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`action-btn ${saved ? "saved" : ""}`}
-                    onClick={() => toggleSave(item)}
-                  >
-                    <Bookmark size={20} fill={saved ? "currentColor" : "none"} />
-                    <span>{saved ? "저장됨" : "저장"}</span>
-                  </button>
-                </div>
-
-                <div className="viewer-nav-hint">
-                  <button type="button" className="hint-btn" onClick={goPrev} disabled={index === 0}>
-                    <ChevronUp size={16} />
-                  </button>
-                  <span className="hint-count">{index + 1} / {contents.length}</span>
-                  <button type="button" className="hint-btn" onClick={goNext} disabled={index === contents.length - 1}>
-                    <ChevronDown size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {slideItems.map(({ item, realIndex }) => (
+          <MemoSlideItem
+            key={`${item.CONTENT_ID}_${realIndex}`}
+            item={item}
+            slideIndex={realIndex}
+            activeIndex={index}
+            likeInfo={getLikeInfo(item.CONTENT_ID, 0)}
+            saved={isSaved(item.CONTENT_ID)}
+            expandedPost={expandedPost}
+            toggleExpanded={toggleExpanded}
+            toggleLike={toggleLike}
+            toggleSave={toggleSave}
+            goPrev={goPrev}
+            goNext={goNext}
+            total={contents.length}
+            videoRefs={videoRefs}
+            tikTokRefs={tikTokRefs}
+            progress={progressMap[item.CONTENT_ID] || 0}
+            onVideoTimeUpdate={handleVideoTimeUpdate}
+            onVideoLoadedMetadata={handleVideoLoadedMetadata}
+          />
+        ))}
       </div>
     </div>
   );

@@ -23,7 +23,9 @@ app.use(session({
   saveUninitialized: false
 }))
 
-const conn = require('./config/db')
+
+const conn = require("./config/db");
+
 const GPT_API_KEY = require('./config/api')
 
 const userRouter = require('./routes/user')
@@ -35,13 +37,13 @@ app.use('/upload', uploadRouter)
 app.use('/user', userRouter)
 
 // 유튜브 Python 실행
-const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
-const pythonProcess = spawn('python', [pythonFilePath], {
-  stdio: 'inherit',
-  shell: true
-})
-pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
-pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
+// const pythonFilePath = path.join(__dirname, '..', 'youtube', 'main.py')
+// const pythonProcess = spawn('python', [pythonFilePath], {
+//   stdio: 'inherit',
+//   shell: true
+// })
+// pythonProcess.on('error', (err) => { console.error('Python 실행 오류:', err) })
+// pythonProcess.on('close', (code) => { console.log(`Python 프로세스 종료됨, 종료코드: ${code}`) })
 
 // 인스타 스케줄러 실행
 // const instaScheduler = spawn('python', ['scheduler.py'], {
@@ -94,37 +96,30 @@ app.get('/api/trend/ranking', (req, res) => {
 
   const sql = `
     SELECT 
-    tk.KEYWORD_ID,
-    tk.KEYWORD_NAME,
-    km.LIFECYCLE_STAGE,
-    km.GROWTH_RATE,
-    km.TOTAL_VIEW_COUNT as LATEST_VIEW,
-    km.TOTAL_LIKE_COUNT as LATEST_LIKE,
-    km.TOTAL_CONTENT_COUNT,
-    -- 영상 수로 나눈 평균 기반 점수
-    ((km.TOTAL_VIEW_COUNT / km.TOTAL_CONTENT_COUNT) * 0.2 
-     + (km.TOTAL_LIKE_COUNT / km.TOTAL_CONTENT_COUNT) * 0.8) AS ENGAGEMENT_SCORE
-FROM T_KEYWORD tk
-JOIN KEYWORD_METRIC km ON tk.KEYWORD_ID = km.KEYWORD_ID
-WHERE 
-    km.LIFECYCLE_STAGE IN ('성장', '성숙')
-    AND km.RECORDED_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-    AND km.TOTAL_CONTENT_COUNT > 0  -- 0으로 나누기 방지
-GROUP BY
-    tk.KEYWORD_ID, tk.KEYWORD_NAME, km.LIFECYCLE_STAGE,
-    km.GROWTH_RATE, km.TOTAL_VIEW_COUNT, km.TOTAL_LIKE_COUNT, km.TOTAL_CONTENT_COUNT
-ORDER BY 
-    FIELD(km.LIFECYCLE_STAGE, '성장', '성숙') ASC, 
-    ENGAGEMENT_SCORE DESC,
-    km.GROWTH_RATE DESC
-LIMIT 10`;
+        tk.KEYWORD_ID,
+        tk.KEYWORD_NAME,
+        km.LIFECYCLE_STAGE,
+        km.GROWTH_RATE,
+        km.TOTAL_VIEW_COUNT as LATEST_VIEW,
+        km.TOTAL_CONTENT_COUNT
+    FROM T_KEYWORD tk
+    JOIN KEYWORD_METRIC km ON tk.KEYWORD_ID = km.KEYWORD_ID
+    WHERE 
+        km.LIFECYCLE_STAGE IN ('성장', '성숙')
+        AND km.RECORDED_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    ORDER BY 
+        FIELD(km.LIFECYCLE_STAGE, '성장', '성숙') ASC, 
+        km.GROWTH_RATE DESC, 
+        km.TOTAL_VIEW_COUNT DESC
+    LIMIT 100
+  `;
 
   conn.query(sql, (err, results) => {
     if (err) {
       console.error("❌ SQL 쿼리 에러 발생:", err.sqlMessage || err);
       return res.status(500).json({ error: "랭킹 조회 실패" });
     }
-    
+
     console.log(`✅ DB 조회 성공! 데이터 수: ${results.length}개`);
     res.json(results);
   });
@@ -210,14 +205,120 @@ app.put("/user/filter", (req, res) => {
   });
 });
 
-app.get("/content/:userId", (req, res) => {
-  const { userId } = req.params
-  const sql = `SELECT * FROM TREND_CONTENT WHERE (FILE_PATH IS NOT NULL AND FILE_PATH != '') OR PLATFORM_TYPE IN ('TIKTOK', 'INSTAGRAM') ORDER BY CREATED_AT DESC LIMIT 100`
-  conn.query(sql, [userId], (err, result) => {
-    if (err) return res.status(500).send("DB 오류")
-    res.json(result)
-  })
-})
+app.get("/content/top100", (req, res) => {
+  const sql = `
+    SELECT
+      ranked.KEYWORD_NAME,
+      ranked.LIFECYCLE_STAGE,
+      ranked.GROWTH_RATE,
+      picked.CONTENT_ID,
+      picked.TITLE,
+      picked.FILE_PATH,
+      picked.ORIGINAL_LINK,
+      picked.PLATFORM_TYPE,
+      picked.CREATOR_NAME,
+      picked.USER_ID,
+      picked.CREATED_AT
+    FROM (
+      SELECT 
+        tk.KEYWORD_NAME,
+        km.LIFECYCLE_STAGE,
+        km.GROWTH_RATE
+      FROM T_KEYWORD tk
+      JOIN KEYWORD_METRIC km
+        ON tk.KEYWORD_ID = km.KEYWORD_ID
+      WHERE km.LIFECYCLE_STAGE IN ('성장', '성숙')
+        AND km.RECORDED_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      ORDER BY
+        FIELD(km.LIFECYCLE_STAGE, '성장', '성숙') ASC,
+        km.GROWTH_RATE DESC,
+        km.TOTAL_VIEW_COUNT DESC
+      LIMIT 100
+    ) ranked
+    JOIN (
+      SELECT *
+      FROM (
+        SELECT
+          recent.KEYWORD,
+          recent.CONTENT_ID,
+          recent.TITLE,
+          recent.FILE_PATH,
+          recent.ORIGINAL_LINK,
+          recent.PLATFORM_TYPE,
+          recent.CREATOR_NAME,
+          recent.USER_ID,
+          recent.CREATED_AT,
+          ROW_NUMBER() OVER (
+            PARTITION BY recent.KEYWORD
+            ORDER BY RAND()
+          ) AS pick_rn
+        FROM (
+          SELECT *
+          FROM (
+            SELECT
+              ck2.KEYWORD,
+              tc2.CONTENT_ID,
+              tc2.TITLE,
+              tc2.FILE_PATH,
+              tc2.ORIGINAL_LINK,
+              tc2.PLATFORM_TYPE,
+              tc2.CREATOR_NAME,
+              tc2.USER_ID,
+              tc2.CREATED_AT,
+              ROW_NUMBER() OVER (
+                PARTITION BY ck2.KEYWORD
+                ORDER BY tc2.CREATED_AT DESC
+              ) AS recent_rn
+            FROM CONTENT_KEYWORD ck2
+            JOIN TREND_CONTENT tc2
+              ON ck2.CONTENT_ID = tc2.CONTENT_ID
+            WHERE (
+              (
+                UPPER(IFNULL(tc2.PLATFORM_TYPE, '')) = 'TIKTOK'
+                AND tc2.ORIGINAL_LINK IS NOT NULL
+                AND TRIM(tc2.ORIGINAL_LINK) != ''
+              )
+              OR
+              (
+                UPPER(IFNULL(tc2.PLATFORM_TYPE, '')) = 'INSTAGRAM'
+                AND (
+                  (tc2.ORIGINAL_LINK IS NOT NULL AND TRIM(tc2.ORIGINAL_LINK) != '')
+                  OR (tc2.FILE_PATH IS NOT NULL AND TRIM(tc2.FILE_PATH) != '')
+                )
+              )
+              OR
+              (
+                UPPER(IFNULL(tc2.PLATFORM_TYPE, '')) NOT IN ('TIKTOK', 'INSTAGRAM')
+                AND tc2.FILE_PATH IS NOT NULL
+                AND TRIM(tc2.FILE_PATH) != ''
+              )
+            )
+          ) base_recent
+          WHERE base_recent.recent_rn <= 20
+        ) recent
+      ) random_pick
+      WHERE random_pick.pick_rn = 1
+    ) picked
+      ON ranked.KEYWORD_NAME = picked.KEYWORD
+    ORDER BY
+      FIELD(ranked.LIFECYCLE_STAGE, '성장', '성숙') ASC,
+      ranked.GROWTH_RATE DESC,
+      picked.CREATED_AT DESC
+    LIMIT 100
+  `;
+
+  conn.query(sql, (err, result) => {
+    if (err) {
+      console.error("top100 조회 에러 상세:", err);
+      return res.status(500).json({
+        message: "DB 오류",
+        error: err.sqlMessage || err.message || String(err),
+      });
+    }
+    res.json(result);
+  });
+});
+
 
 app.get("/search-content/:userId", (req, res) => {
   const { userId } = req.params
@@ -245,9 +346,28 @@ app.get("/search-content/:userId", (req, res) => {
   })
 })
 
-// 카테고리, 키워드 분류 AI 실행
-runAiScheduler()
 
-app.listen(3002, () => {
-  console.log("Trendformer 서버 실행 중: http://localhost:3002")
-})
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+});
+
+
+// 카테고리, 키워드 분류 AI 실행
+conn.connect((err) => {
+  if (err) {
+    console.error("DB 연결 실패:", err);
+    return;
+  }
+
+  console.log("DB 연결 성공");
+
+  runAiScheduler();
+
+  app.listen(3002, () => {
+    console.log("Trendformer 서버 실행 중: http://localhost:3002");
+  });
+});
