@@ -48,6 +48,7 @@ def run_scheduler():
 
     # 서버 시작 즉시 실행
     scheduled_job()
+    mp4_refresh_job()
 
     # 3시간마다 반복
     schedule.every(3).hours.do(scheduled_job)
