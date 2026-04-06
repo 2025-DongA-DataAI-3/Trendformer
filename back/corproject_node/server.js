@@ -94,23 +94,30 @@ app.get('/api/trend/ranking', (req, res) => {
 
   const sql = `
     SELECT 
-        tk.KEYWORD_ID,
-        tk.KEYWORD_NAME,
-        km.LIFECYCLE_STAGE,
-        km.GROWTH_RATE,
-        km.TOTAL_VIEW_COUNT as LATEST_VIEW,
-        km.TOTAL_CONTENT_COUNT
-    FROM T_KEYWORD tk
-    JOIN KEYWORD_METRIC km ON tk.KEYWORD_ID = km.KEYWORD_ID
-    WHERE 
-        km.LIFECYCLE_STAGE IN ('성장', '성숙')
-        AND km.RECORDED_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-    ORDER BY 
-        FIELD(km.LIFECYCLE_STAGE, '성장', '성숙') ASC, 
-        km.GROWTH_RATE DESC, 
-        km.TOTAL_VIEW_COUNT DESC
-    LIMIT 10
-  `;
+    tk.KEYWORD_ID,
+    tk.KEYWORD_NAME,
+    km.LIFECYCLE_STAGE,
+    km.GROWTH_RATE,
+    km.TOTAL_VIEW_COUNT as LATEST_VIEW,
+    km.TOTAL_LIKE_COUNT as LATEST_LIKE,
+    km.TOTAL_CONTENT_COUNT,
+    -- 영상 수로 나눈 평균 기반 점수
+    ((km.TOTAL_VIEW_COUNT / km.TOTAL_CONTENT_COUNT) * 0.2 
+     + (km.TOTAL_LIKE_COUNT / km.TOTAL_CONTENT_COUNT) * 0.8) AS ENGAGEMENT_SCORE
+FROM T_KEYWORD tk
+JOIN KEYWORD_METRIC km ON tk.KEYWORD_ID = km.KEYWORD_ID
+WHERE 
+    km.LIFECYCLE_STAGE IN ('성장', '성숙')
+    AND km.RECORDED_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    AND km.TOTAL_CONTENT_COUNT > 0  -- 0으로 나누기 방지
+GROUP BY
+    tk.KEYWORD_ID, tk.KEYWORD_NAME, km.LIFECYCLE_STAGE,
+    km.GROWTH_RATE, km.TOTAL_VIEW_COUNT, km.TOTAL_LIKE_COUNT, km.TOTAL_CONTENT_COUNT
+ORDER BY 
+    FIELD(km.LIFECYCLE_STAGE, '성장', '성숙') ASC, 
+    ENGAGEMENT_SCORE DESC,
+    km.GROWTH_RATE DESC
+LIMIT 10`;
 
   conn.query(sql, (err, results) => {
     if (err) {
