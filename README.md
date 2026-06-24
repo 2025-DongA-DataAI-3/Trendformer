@@ -160,14 +160,14 @@ cd TrendFormer
 
 ```bash
 cd backend
-npm install
-npm start
+nodemon server.js
 ```
 
-### 3) Python 분석 환경 설정
+### 3) Frontend 실행
 
 ```bash
-pip install pandas numpy scikit-learn xgboost
+cd frontend
+npm run dev
 ```
 
 ### 4) 분석 파일 실행
@@ -221,10 +221,12 @@ python analysis/trend_analysis.py
 
 | 이름  | 역할                              |
 | --- | ------------------------------- |
-| 박진엽 | 데이터 분석, 머신러닝, Backend, Frontend |
-| 팀원명 | 역할 작성                           |
-| 팀원명 | 역할 작성                           |
-
+| 박진엽 | DB 구축, 머신러닝, Backend,|
+| 이상원 | pm, Backend, 머신러닝, AI 모델링                           |
+| 강동연 | Frontend, 데이터 분석                           |
+| 황지용 | Frontend |
+| 김지호 | 역할 작성                           |
+ 
 <br/>
 
 ## 14. GitHub
